@@ -17,26 +17,13 @@ through UDP discovery.
 -   UDP broadcast discovery for the RIVUNE Android app.
 -   Health endpoint for client-side server verification.
 
-## Network defaults
-
-  Service                                  Default
-  ------------------- ----------------------------
-  HTTP server                               `8080`
-  UDP discovery                            `39876`
-  Discovery request     `MOBS_JUKEBOX_DISCOVER_V1`
-  Health endpoint                    `/api/health`
-
-The discovery response identifies the service as `mobs-jukebox` and
-includes the HTTP port. The Android app uses the sender's IP address and
-the advertised port to reach the server.
-
 ## Requirements
 
 -   Node.js with support for the built-in `node:` modules used by the
     project.
 -   npm.
--   A folder containing the music files you want to make available.
--   Server device and client devices connected to the same local
+-   A folder containing the music files you want to make available at `/musics`
+- server device and client devices connected to the same local
     network.
 
 ## Installation and startup
@@ -179,7 +166,3 @@ Android client unless both projects are updated together:
 When modifying playback, WebSocket, or library modules, test the
 complete flow with at least one Android client and one browser client.
 
-## License
-
-Add the license and copyright details applicable to your distribution
-before publishing this project.
