@@ -1,0 +1,42 @@
+export function createPlayer(audio) {
+  let queue = [];
+  let index = -1;
+  const player = {
+    get currentTrack() { return queue[index] || null; },
+    setQueue(tracks, startId) {
+      queue = [...tracks];
+      index = queue.findIndex(t => t.id === startId);
+      if (index < 0) index = 0;
+      this.loadCurrent();
+    },
+    loadCurrent() {
+      const track = this.currentTrack;
+      if (!track) { audio.removeAttribute('src'); return; }
+      audio.src = track.streamUrl;
+      audio.load();
+    },
+    async play() {
+      if (!this.currentTrack) return;
+      try { await audio.play(); }
+      catch (error) { console.warn('Playback requires a user gesture or supported format:', error); }
+    },
+    pause() { audio.pause(); },
+    toggle() { return audio.paused ? this.play() : this.pause(); },
+    next() {
+      if (!queue.length) return;
+      index = (index + 1) % queue.length;
+      this.loadCurrent();
+      this.play();
+    },
+    previous() {
+      if (!queue.length) return;
+      if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+      index = (index - 1 + queue.length) % queue.length;
+      this.loadCurrent();
+      this.play();
+    },
+    setVolume(value) { audio.volume = Math.max(0, Math.min(1, value)); }
+  };
+  audio.volume = 0.8;
+  return player;
+}
