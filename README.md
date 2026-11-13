@@ -1,190 +1,46 @@
-# RIVUNE Server
+# RIVUNE — Public MP3 Streaming
 
-**Music Without Boundaries.**
+RIVUNE is now a PHP/MySQL MP3 streaming website. The public can browse and listen without accounts. Only the administrator can upload or delete music.
 
-RIVUNE Server is the Node.js side of the RIVUNE local-network music
-streaming system. It serves the web player and music library to devices
-on the same Wi-Fi/LAN, provides HTTP API endpoints, synchronizes
-playback through WebSockets, and advertises itself to the Android app
-through UDP discovery.
+## Stack
+- PHP 7.4+ (PHP 8.x recommended)
+- MySQL 5.7+ / MariaDB
+- HTML, CSS and vanilla JavaScript
+- HTTP byte-range audio streaming for seeking
 
 ## Features
+- Public searchable MP3 library
+- Persistent browser audio player with play/pause, previous/next, shuffle, seek and volume
+- Admin login with password hashing and session protection
+- Admin-only MP3 upload and delete
+- Song title, artist and album fields
+- One-time web installer
+- Protected storage directory; audio is streamed through stream.php
 
--   Local HTTP server and browser-based music player.
--   Music-library scanning and track information.
--   Audio streaming to connected clients.
--   WebSocket-based playback and client synchronization.
--   UDP broadcast discovery for the RIVUNE Android app.
--   Health endpoint for client-side server verification.
+## Installation
+1. Create a MySQL database and database user in your hosting control panel.
+2. Upload the repository contents to the website document root. Keep the storage/ directory writable by PHP; do not expose its contents publicly.
+3. Open /install.php in your browser.
+4. Enter the MySQL host, database name, database username/password, and choose an administrator username/password (12+ characters).
+5. Sign in at /admin.php and upload MP3 files.
+6. Visit the home page to listen.
 
-## Requirements
+The installer creates the tracks table and writes database/admin settings to storage/config.php. It refuses to run again once that file exists. Back up the database and storage/ directory together.
 
--   Node.js with support for the built-in `node:` modules used by the
-    project.
--   npm.
--   A folder containing the music files you want to make available at `/musics`
-- server device and client devices connected to the same local
-    network.
+## Hosting configuration
+- Enable PHP PDO MySQL and Fileinfo extensions.
+- Set upload_max_filesize and post_max_size to at least 26M (or larger if you raise the application upload limit).
+- Ensure PHP can write to storage/ and storage/music/.
+- Keep .htaccess enabled on Apache hosting. On Nginx, configure equivalent deny rules for /storage/.
+- Use HTTPS for the admin login.
+- The application upload limit is currently 25 MB per MP3.
 
-## Installation and startup
+## Security notes
+- Admin passwords are stored using PHP password_hash().
+- Upload and delete operations require an authenticated admin session and CSRF token.
+- Uploaded files are restricted to MP3 extension/MIME checks and receive random server-side filenames.
+- Audio files are not directly addressable by their stored path; the stream endpoint checks the database record.
+- Do not commit storage/config.php, database dumps, or uploaded music to Git.
 
-1.  Extract the server project.
-
-2.  Open a terminal in the project directory.
-
-3.  Install dependencies:
-
-    ``` bash
-    npm install
-    ```
-
-4.  Start the server using the start script defined in `package.json`:
-
-    ``` bash
-    npm start
-    ```
-
-If the project does not define an `npm start` script, check
-`package.json` for the configured entry point and run that entry point
-with Node.js. Keep the terminal session running while you use RIVUNE.
-
-> The exact startup script and music-directory configuration depend on
-> the `package.json` and configuration files included in your server
-> project. Use those project settings rather than assuming an
-> environment-variable name.
-
-## Connecting from the Android app
-
-1.  Start RIVUNE Server.
-2.  Connect the Android device to the same Wi-Fi network as the server.
-3.  Open the RIVUNE app and run server discovery.
-4.  Select the server when it appears. The app checks the server's
-    `/api/health` endpoint before opening its web player.
-
-If discovery does not work, check that:
-
--   Both devices are on the same LAN/Wi-Fi network.
--   The router does not enable client/AP isolation between wireless
-    devices.
--   The server device's firewall allows inbound TCP traffic on port
-    `8080` and UDP traffic on port `39876`.
--   The server process is still running.
--   The network is not a guest network that blocks device-to-device
-    communication.
-
-## Project layout
-
-The project is organized into focused modules. The following are key
-areas:
-
-``` text
-src/
-  core/
-    app.js
-  server/
-    discoveryServer.js
-    httpServer.js
-  library/
-    libraryService.js
-public/
-  index.html
-  js/
-    app.js
-    network/
-      websocket.js
-    player/
-      playbackController.js
-```
-
--   `src/core/app.js` coordinates application startup.
--   `src/server/discoveryServer.js` handles UDP discovery requests.
--   `src/server/httpServer.js` handles HTTP requests and serves the web
-    application/API.
--   `src/library/libraryService.js` manages the music library.
--   `public/` contains the browser-based player interface and its
-    client-side modules.
-
-## Health check
-
-With the server running on its default port, open:
-
-``` text
-http://localhost:8080/api/health
-```
-
-A healthy server returns JSON containing the service identifier, status,
-and track count.
-
-## Troubleshooting
-
-**The Android app cannot find the server**
-
--   Confirm both devices are on the same Wi-Fi/LAN.
--   Check router AP/client isolation and firewall rules.
--   Watch the server terminal for UDP discovery request logs.
--   Retry discovery after the server has fully started.
-
-**The app finds the server but cannot connect**
-
--   Check that the HTTP server is listening on the advertised port.
--   Open `http://SERVER_IP:8080/api/health` from a browser on the
-    Android device, replacing `SERVER_IP` with the server's LAN IP.
--   Check firewall rules for TCP port `8080`.
-
-**The web player opens but tracks do not appear**
-
--   Confirm the configured music folder contains supported audio files.
--   Check server terminal output for file access or scanning errors.
--   Reload the web player after the library has finished loading.
-
-**Playback synchronization or streaming problems**
-
--   Keep the server running and avoid switching networks during
-    playback.
--   Check the browser console and server terminal for WebSocket or
-    streaming errors.
--   Ensure the network is stable and devices can communicate directly.
-
-## Security and privacy notes
-
-RIVUNE is designed for use on a trusted local network. Do not expose the
-server directly to the public internet unless you have independently
-added and reviewed appropriate authentication, transport security, and
-access controls. Anyone who can reach an unprotected server may be able
-to access the music service it provides.
-
-## Development notes
-
-Keep the discovery protocol and service identifier compatible with the
-Android client unless both projects are updated together:
-
--   UDP request: `MOBS_JUKEBOX_DISCOVER_V1`
--   Service identifier: `mobs-jukebox`
--   Default HTTP port: `8080`
--   Default UDP port: `39876`
-
-When modifying playback, WebSocket, or library modules, test the
-complete flow with at least one Android client and one browser client.
-
-
-
-## Music manager and playback controls
-
-The browser player supports adding audio files directly to the server library. Use **Add music** in the library section to upload supported audio files (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV, AIFF, and WMA). Individual uploads are limited to 100 MB. Tracks can be removed with the delete control beside each library item; deleting a track removes the underlying file from the configured music directory.
-
-The player also includes shuffle playback, previous/next navigation, seeking, volume control, and an expanded full-screen listening view. The playback queue remains local to each browser session.
-
-### Music manager API
-
-- `GET /api/library` — list library tracks.
-- `POST /api/tracks/upload?filename=track.mp3` — upload one audio file as the raw request body.
-- `DELETE /api/tracks/:id` — permanently delete a library track.
-- `GET /api/tracks/:id/stream` — stream a track.
-
-The upload and delete endpoints are intended for a trusted private network. This project does not yet include user accounts or authentication; do not expose an unprotected instance to the public internet.
-
-## Hosting compatibility
-
-The full RIVUNE server requires a persistent Node.js process, WebSockets, and UDP discovery for the Android app. InfinityFree's free shared hosting does not support Node.js server processes or WebSocket hosting, and its platform does not provide UDP ports for this use case. The current server therefore cannot be deployed there as-is.
-
-For the complete experience, use a Node.js-capable host or a VPS. An InfinityFree-compatible edition would require a separate PHP-based HTTP/API backend and an alternative to the current WebSocket and UDP discovery features; that should be treated as a separate deployment target so the existing LAN server and Android compatibility are preserved.
+## Project status
+The dev branch is the active PHP website implementation. The old Node.js/LAN discovery files remain in the repository for now but are not used by this PHP entry point. The main branch has not been changed.
