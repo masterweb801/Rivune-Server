@@ -13,16 +13,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   elseif ($action==='upload') {
     require_admin();
     if (empty($_FILES['mp3']) || $_FILES['mp3']['error']!==UPLOAD_ERR_OK) $error='Choose an MP3 file (check the server upload size limit).';
-    elseif ($_FILES['mp3']['size']>25*1024*1024) $error='Each MP3 must be 25 MB or smaller.';
+    elseif ($_FILES['mp3']['size']<1 || $_FILES['mp3']['size']>25*1024*1024) $error='Each MP3 must be between 1 byte and 25 MB.';
     else {
       $file=$_FILES['mp3']; $ext=strtolower(pathinfo($file['name'],PATHINFO_EXTENSION)); $mime=(new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
-      if ($ext!=='mp3' || !in_array($mime,['audio/mpeg','audio/mp3','application/octet-stream'],true)) $error='Only valid MP3 files are accepted.';
+      if ($ext!=='mp3' || !in_array($mime,['audio/mpeg','audio/mp3'],true)) $error='Only valid MP3 files are accepted.';
       else {
         $title=trim($_POST['title']??'') ?: pathinfo($file['name'],PATHINFO_FILENAME); $artist=trim($_POST['artist']??'') ?: 'Unknown artist'; $album=trim($_POST['album']??'') ?: 'Unknown album';
         $stored=bin2hex(random_bytes(20)).'.mp3'; $dir=__DIR__.'/storage/music';
         if (!is_dir($dir)) mkdir($dir,0750,true);
         if (move_uploaded_file($file['tmp_name'],$dir.'/'.$stored)) {
-          $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name) VALUES(?,?,?,?,?)'); $q->execute([mb_substr($title,0,190),mb_substr($artist,0,190),mb_substr($album,0,190),basename($file['name']),$stored]); $notice='Track uploaded successfully.';
+          try { $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name) VALUES(?,?,?,?,?)'); $q->execute([substr($title,0,190),substr($artist,0,190),substr($album,0,190),basename($file['name']),$stored]); $notice='Track uploaded successfully.'; }
+          catch (Throwable $e) { @unlink($dir.'/'.$stored); $error='The track could not be added to the database.'; }
         } else $error='Could not save the uploaded file. Check storage/music permissions.';
       }
     }
