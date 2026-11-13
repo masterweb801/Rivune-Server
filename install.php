@@ -3,7 +3,8 @@ declare(strict_types=1);
 require __DIR__.'/lib/bootstrap.php';
 if (is_file(__DIR__.'/storage/config.php')) { header('Location: admin.php'); exit; }
 $error='';
-if ($_SERVER['REQUEST_METHOD']==='POST') {\n  csrf_check();
+if ($_SERVER['REQUEST_METHOD']==='POST') {
+  csrf_check();
   $host=trim($_POST['db_host']??''); $name=trim($_POST['db_name']??''); $user=trim($_POST['db_user']??''); $pass=(string)($_POST['db_pass']??'');
   $adminUser=trim($_POST['admin_user']??'admin'); $adminPass=(string)($_POST['admin_pass']??'');
   if ($host==='' || $name==='' || $user==='' || $adminUser==='' || strlen($adminPass)<12) $error='Complete all database fields and use an admin password of at least 12 characters.';
