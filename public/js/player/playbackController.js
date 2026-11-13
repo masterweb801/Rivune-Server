@@ -15,6 +15,7 @@ export function createPlayer(audio) {
       this.loadCurrent();
     },
     setShuffle(enabled) { shuffle = Boolean(enabled); },
+    clear() { queue = []; index = -1; history.length = 0; audio.pause(); audio.removeAttribute('src'); },
     loadCurrent() {
       const track = this.currentTrack;
       if (!track) { audio.removeAttribute('src'); return; }
