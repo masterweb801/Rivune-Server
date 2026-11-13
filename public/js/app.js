@@ -5,14 +5,12 @@ const audio = document.querySelector('#audio');
 const player = createPlayer(audio);
 const libraryEl = document.querySelector('#library');
 const searchEl = document.querySelector('#search');
+const root = document.documentElement;
 let tracks = [];
 
 const themeToggle = document.querySelector('#theme-toggle');
-const root = document.documentElement;
 const savedTheme = localStorage.getItem('rivune-theme');
-if (savedTheme === 'light' || savedTheme === 'dark') {
-  root.dataset.theme = savedTheme;
-}
+if (savedTheme === 'light' || savedTheme === 'dark') root.dataset.theme = savedTheme;
 function syncThemeButton() {
   const isDark = root.dataset.theme !== 'light';
   themeToggle.setAttribute('aria-label', isDark ? 'Switch to light theme' : 'Switch to dark theme');
@@ -21,56 +19,85 @@ syncThemeButton();
 themeToggle.addEventListener('click', () => {
   root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
   localStorage.setItem('rivune-theme', root.dataset.theme);
-  document.querySelector('meta[name="theme-color"]').content =
-    root.dataset.theme === 'light' ? '#F7F5FC' : '#11111D';
+  document.querySelector('meta[name="theme-color"]').content = root.dataset.theme === 'light' ? '#F7F5FC' : '#11111D';
   syncThemeButton();
 });
-document.addEventListener('keydown', (event) => {
+document.addEventListener('keydown', event => {
   if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
     event.preventDefault();
     searchEl.focus();
   }
+  if (event.key === 'Escape') document.querySelector('.player').classList.remove('expanded');
 });
-
 
 function formatTime(seconds = 0) {
   if (!Number.isFinite(seconds)) return '0:00';
-  const mins = Math.floor(seconds / 60);
-  return `${mins}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+  return `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 }
-
+function filtered() {
+  const q = searchEl.value.trim().toLowerCase();
+  return tracks.filter(t => `${t.title} ${t.artist} ${t.album}`.toLowerCase().includes(q));
+}
 function render(list) {
   libraryEl.replaceChildren();
-  document.querySelector('#track-count').textContent = `${list.length} tracks`;
+  document.querySelector('#track-count').textContent = `${tracks.length} ${tracks.length === 1 ? 'track' : 'tracks'}`;
   if (!list.length) {
     const empty = document.createElement('div');
     empty.className = 'empty';
-    empty.textContent = tracks.length ? 'No matching tracks.' : 'No music found. Add audio files to the music/ folder and refresh.';
+    empty.innerHTML = '<span class="empty-orb">♫</span><strong></strong><span></span>';
+    empty.querySelector('strong').textContent = tracks.length ? 'No matching tracks' : 'Your library is waiting';
+    empty.querySelector('span:last-child').textContent = tracks.length ? 'Try another search.' : 'Add audio files using the button above.';
     libraryEl.append(empty);
     return;
   }
   for (const track of list) {
-    const row = document.createElement('button');
-    row.className = `track${player.currentTrack?.id === track.id ? ' active' : ''}`;
-    row.type = 'button';
-    row.innerHTML = `<span class="cover">♫</span><span class="track-main"><strong></strong><span></span></span><time></time>`;
-    if (track.artworkUrl) { row.querySelector('.cover').style.backgroundImage = `url("${track.artworkUrl}")`; row.querySelector('.cover').style.backgroundSize = 'cover'; row.querySelector('.cover').textContent = ''; }
-    row.querySelector('strong').textContent = track.title;
-    row.querySelector('.track-main span').textContent = `${track.artist} · ${track.album}`;
-    row.querySelector('time').textContent = formatTime(track.duration);
-    row.addEventListener('click', () => {
+    const row = document.createElement('div');
+    row.className = 'track-row';
+    const playButton = document.createElement('button');
+    playButton.className = `track${player.currentTrack?.id === track.id ? ' active' : ''}`;
+    playButton.type = 'button';
+    playButton.innerHTML = '<span class="cover">♫</span><span class="track-main"><strong></strong><span></span></span><time></time>';
+    if (track.artworkUrl) {
+      playButton.querySelector('.cover').style.backgroundImage = `url("${track.artworkUrl}")`;
+      playButton.querySelector('.cover').textContent = '';
+    }
+    playButton.querySelector('strong').textContent = track.title;
+    playButton.querySelector('.track-main span').textContent = `${track.artist} · ${track.album}`;
+    playButton.querySelector('time').textContent = formatTime(track.duration);
+    playButton.addEventListener('click', () => {
       player.setQueue(tracks, track.id);
       player.play();
       updatePlayer();
       render(filtered());
     });
+    const remove = document.createElement('button');
+    remove.className = 'delete-track';
+    remove.type = 'button';
+    remove.title = `Delete ${track.title}`;
+    remove.setAttribute('aria-label', `Delete ${track.title}`);
+    remove.textContent = '×';
+    remove.addEventListener('click', async () => {
+      if (!confirm(`Delete “${track.title}” from your music library? This removes the file from the server.`)) return;
+      remove.disabled = true;
+      try {
+        const response = await fetch(`/api/tracks/${encodeURIComponent(track.id)}`, { method: 'DELETE' });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Could not delete track');
+        if (player.currentTrack?.id === track.id) {
+          audio.pause();
+          audio.removeAttribute('src');
+          player.setQueue(tracks.filter(item => item.id !== track.id), null);
+          updatePlayer();
+        }
+        await loadLibrary();
+      } catch (error) {
+        alert(error.message);
+        remove.disabled = false;
+      }
+    });
+    row.append(playButton, remove);
     libraryEl.append(row);
   }
-}
-
-function filtered() {
-  const q = searchEl.value.trim().toLowerCase();
-  return tracks.filter(t => `${t.title} ${t.artist} ${t.album}`.toLowerCase().includes(q));
 }
 function updatePlayer() {
   const track = player.currentTrack;
@@ -82,15 +109,45 @@ function updatePlayer() {
   art.style.backgroundSize = 'cover';
   document.querySelector('#play-pause').classList.toggle('is-playing', !audio.paused);
   document.querySelector('#play-pause').setAttribute('aria-label', audio.paused ? 'Play' : 'Pause');
+  const shuffleButton = document.querySelector('#shuffle');
+  shuffleButton.classList.toggle('selected', player.isShuffle);
+  shuffleButton.setAttribute('aria-pressed', String(player.isShuffle));
+  shuffleButton.setAttribute('aria-label', player.isShuffle ? 'Disable shuffle' : 'Enable shuffle');
 }
 async function loadLibrary() {
   const response = await fetch('/api/library');
   if (!response.ok) throw new Error('Unable to load music library');
   const data = await response.json();
-  tracks = data.tracks;
+  tracks = Array.isArray(data.tracks) ? data.tracks : [];
   render(filtered());
 }
 searchEl.addEventListener('input', () => render(filtered()));
+document.querySelector('#upload-files').addEventListener('change', async event => {
+  const files = [...event.target.files];
+  if (!files.length) return;
+  const upload = document.querySelector('.upload-button');
+  upload.classList.add('busy');
+  upload.setAttribute('aria-busy', 'true');
+  try {
+    for (const file of files) {
+      const response = await fetch(`/api/tracks/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(`${file.name}: ${result.error || 'Upload failed'}`);
+    }
+    await loadLibrary();
+  } catch (error) {
+    alert(error.message);
+    await loadLibrary().catch(() => {});
+  } finally {
+    event.target.value = '';
+    upload.classList.remove('busy');
+    upload.removeAttribute('aria-busy');
+  }
+});
 document.querySelector('#play-pause').addEventListener('click', () => {
   if (!player.currentTrack && tracks.length) player.setQueue(tracks, tracks[0].id);
   player.toggle();
@@ -98,9 +155,14 @@ document.querySelector('#play-pause').addEventListener('click', () => {
 });
 document.querySelector('#next').addEventListener('click', () => { player.next(); updatePlayer(); render(filtered()); });
 document.querySelector('#previous').addEventListener('click', () => { player.previous(); updatePlayer(); render(filtered()); });
-document.querySelector('#volume').addEventListener('input', e => player.setVolume(Number(e.target.value)));
-document.querySelector('#seek').addEventListener('input', e => {
-  if (audio.duration) audio.currentTime = (Number(e.target.value) / 1000) * audio.duration;
+document.querySelector('#shuffle').addEventListener('click', () => { player.setShuffle(!player.isShuffle); updatePlayer(); });
+document.querySelector('#expand-player').addEventListener('click', () => {
+  const expanded = document.querySelector('.player').classList.toggle('expanded');
+  document.querySelector('#expand-player').setAttribute('aria-label', expanded ? 'Collapse player' : 'Expand player');
+});
+document.querySelector('#volume').addEventListener('input', event => player.setVolume(Number(event.target.value)));
+document.querySelector('#seek').addEventListener('input', event => {
+  if (audio.duration) audio.currentTime = (Number(event.target.value) / 1000) * audio.duration;
 });
 audio.addEventListener('timeupdate', () => {
   document.querySelector('#elapsed').textContent = formatTime(audio.currentTime);
@@ -111,14 +173,13 @@ audio.addEventListener('play', updatePlayer);
 audio.addEventListener('pause', updatePlayer);
 audio.addEventListener('ended', () => { player.next(); updatePlayer(); render(filtered()); });
 
-createSocket((online) => {
+createSocket(online => {
   const el = document.querySelector('#connection');
   el.classList.toggle('online', online);
   el.querySelector('span').textContent = online ? 'Server connected' : 'Reconnecting';
-}, async (message) => {
+}, async message => {
   if (message.type === 'library:updated') await loadLibrary();
 });
-
 loadLibrary().catch(() => {
   libraryEl.replaceChildren();
   const error = document.createElement('div');
