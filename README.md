@@ -166,3 +166,25 @@ Android client unless both projects are updated together:
 When modifying playback, WebSocket, or library modules, test the
 complete flow with at least one Android client and one browser client.
 
+
+
+## Music manager and playback controls
+
+The browser player supports adding audio files directly to the server library. Use **Add music** in the library section to upload supported audio files (MP3, M4A, AAC, OGG, OPUS, FLAC, WAV, AIFF, and WMA). Individual uploads are limited to 100 MB. Tracks can be removed with the delete control beside each library item; deleting a track removes the underlying file from the configured music directory.
+
+The player also includes shuffle playback, previous/next navigation, seeking, volume control, and an expanded full-screen listening view. The playback queue remains local to each browser session.
+
+### Music manager API
+
+- `GET /api/library` — list library tracks.
+- `POST /api/tracks/upload?filename=track.mp3` — upload one audio file as the raw request body.
+- `DELETE /api/tracks/:id` — permanently delete a library track.
+- `GET /api/tracks/:id/stream` — stream a track.
+
+The upload and delete endpoints are intended for a trusted private network. This project does not yet include user accounts or authentication; do not expose an unprotected instance to the public internet.
+
+## Hosting compatibility
+
+The full RIVUNE server requires a persistent Node.js process, WebSockets, and UDP discovery for the Android app. InfinityFree's free shared hosting does not support Node.js server processes or WebSocket hosting, and its platform does not provide UDP ports for this use case. The current server therefore cannot be deployed there as-is.
+
+For the complete experience, use a Node.js-capable host or a VPS. An InfinityFree-compatible edition would require a separate PHP-based HTTP/API backend and an alternative to the current WebSocket and UDP discovery features; that should be treated as a separate deployment target so the existing LAN server and Android compatibility are preserved.
