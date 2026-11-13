@@ -84,9 +84,7 @@ function render(list) {
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Could not delete track');
         if (player.currentTrack?.id === track.id) {
-          audio.pause();
-          audio.removeAttribute('src');
-          player.setQueue(tracks.filter(item => item.id !== track.id), null);
+          player.clear();
           updatePlayer();
         }
         await loadLibrary();
