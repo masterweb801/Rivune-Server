@@ -16,6 +16,30 @@ require __DIR__ . '/lib/bootstrap.php';
 <div id="tracks" class="tracks"><div class="empty">Loading the music library…</div></div></section>
 </main>
 <footer><span>RIVUNE</span><span>Music for everyone.</span></footer>
-<aside class="player" aria-label="Audio player"><div class="player-inner"><div class="now"><div id="cover" class="cover">♫</div><div class="now-copy"><strong id="now-title">Nothing playing</strong><span id="now-artist">Choose a track</span></div></div><div class="transport"><div class="controls"><button id="shuffle" class="control" title="Shuffle" aria-label="Shuffle">⤨</button><button id="prev" class="control" aria-label="Previous">|◀</button><button id="toggle" class="play" aria-label="Play">▶</button><button id="next" class="control" aria-label="Next">▶|</button></div><div class="timeline"><time id="elapsed">0:00</time><input id="seek" type="range" min="0" max="1000" value="0"><time id="duration">0:00</time></div></div><label class="volume">♫ <input id="volume" type="range" min="0" max="1" step=".01" value=".8"></label></div></aside>
+<aside class="player" id="player" aria-label="Audio player">
+  <div class="player-inner" id="mini-player">
+    <div class="mini-now" id="mini-now" role="button" tabindex="0" aria-label="Open full screen player">
+      <div id="cover" class="cover">♫</div>
+      <div class="now-copy"><strong id="now-title">Nothing playing</strong><span id="now-artist">Choose a track</span></div>
+    </div>
+    <div class="mini-controls">
+      <button id="prev" class="control" aria-label="Previous">|◀</button>
+      <button id="toggle" class="play" aria-label="Play">▶</button>
+      <button id="next" class="control" aria-label="Next">▶|</button>
+    </div>
+    <div class="mini-progress"><span id="mini-progress"></span></div>
+  </div>
+  <section class="expanded-player" id="expanded-player" aria-hidden="true" aria-label="Full screen player">
+    <div class="expanded-top"><button id="collapse-player" class="collapse-player" aria-label="Collapse player">⌄</button><span>NOW PLAYING</span><button id="expanded-shuffle" class="control" aria-label="Shuffle">⤨</button></div>
+    <div class="expanded-content">
+      <div class="expanded-art" id="expanded-art">♫</div>
+      <div class="expanded-track"><strong id="expanded-title">Nothing playing</strong><span id="expanded-artist">Choose a track</span></div>
+      <div class="expanded-timeline"><time id="expanded-elapsed">0:00</time><input id="expanded-seek" type="range" min="0" max="1000" value="0"><time id="expanded-duration">0:00</time></div>
+      <div class="expanded-controls"><button id="expanded-prev" class="control" aria-label="Previous">|◀</button><button id="expanded-toggle" class="play" aria-label="Play">▶</button><button id="expanded-next" class="control" aria-label="Next">▶|</button></div>
+      <label class="expanded-volume">♫ <input id="expanded-volume" type="range" min="0" max="1" step=".01" value=".8"></label>
+    </div>
+    <p class="expanded-hint">Swipe down or tap the arrow to close</p>
+  </section>
+</aside>
 <audio id="audio" preload="metadata"></audio><script src="assets/js/app.js" defer></script>
 </body></html>
