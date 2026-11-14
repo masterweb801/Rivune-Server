@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
-if (session_status() !== PHP_SESSION_ACTIVE) {
+// Public audio delivery does not use sessions; avoid session I/O and locking on every Range request.
+$isPublicStreamRequest = basename($_SERVER['SCRIPT_NAME'] ?? '') === 'stream.php';
+if (!$isPublicStreamRequest && session_status() !== PHP_SESSION_ACTIVE) {
   ini_set('session.use_strict_mode', '1');
   session_set_cookie_params(['httponly'=>true,'secure'=>!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS']!=='off','samesite'=>'Lax']);
   session_start();
