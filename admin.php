@@ -2,6 +2,28 @@
 declare(strict_types=1);
 require __DIR__.'/lib/bootstrap.php';
 if (!isset($pdo)) { header('Location: install.php'); exit; }
+
+// Detect real MPEG audio frames instead of relying on the hosting server's MIME label.
+function rivune_is_mp3(string $path): bool {
+  $fp = @fopen($path, 'rb');
+  if (!$fp) return false;
+  $data = fread($fp, 1048576);
+  fclose($fp);
+  if ($data === false || strlen($data) < 4) return false;
+  $length = strlen($data);
+  for ($i = 0; $i <= $length - 4; $i++) {
+    $b1 = ord($data[$i]);
+    $b2 = ord($data[$i + 1]);
+    $b3 = ord($data[$i + 2]);
+    if ($b1 !== 0xFF || ($b2 & 0xE0) !== 0xE0) continue;
+    $version = ($b2 >> 3) & 0x03;
+    $layer = ($b2 >> 1) & 0x03;
+    $bitrate = ($b3 >> 4) & 0x0F;
+    $sampleRate = ($b3 >> 2) & 0x03;
+    if ($version !== 0x01 && $layer !== 0 && $bitrate !== 0 && $bitrate !== 0x0F && $sampleRate !== 0x03) return true;
+  }
+  return false;
+}
 $error=''; $notice='';
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
@@ -39,9 +61,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $failed[]=$name.': file must be between 1 byte and 25 MB'; continue;
           }
           $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
-          $mime=(new finfo(FILEINFO_MIME_TYPE))->file($tmp);
-          if ($ext!=='mp3' || !in_array($mime,['audio/mpeg','audio/mp3','application/octet-stream'],true)) {
-            $failed[]=$name.': not recognized as an MP3 file'; continue;
+          if ($ext!=='mp3' || !rivune_is_mp3($tmp)) {
+            $failed[]=$name.': file does not contain a valid MP3 audio frame'; continue;
           }
           $title=pathinfo($name,PATHINFO_FILENAME);
           $stored=bin2hex(random_bytes(20)).'.mp3';
