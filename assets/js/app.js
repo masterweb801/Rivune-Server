@@ -26,11 +26,12 @@
     $('toggle').textContent=playing?'Ⅱ':'▶';$('expanded-toggle').textContent=playing?'Ⅱ':'▶';
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
     $('expanded-shuffle').classList.toggle('selected',shuffled);
+    $('expanded-shuffle').setAttribute('aria-pressed',shuffled?'true':'false');
     render();
   }
   function playTrack(t){
-    queue=shuffled?[...tracks].sort(()=>Math.random()-.5):[...tracks];
-    current=queue.findIndex(x=>x.id===t.id);
+    if(shuffled){queue=[t,...tracks.filter(x=>x.id!==t.id).sort(()=>Math.random()-.5)];current=0;}
+    else{queue=[...tracks];current=queue.findIndex(x=>x.id===t.id);}
     audio.src=t.stream_url;
     audio.play().then(sync).catch(sync);
     sync();
@@ -49,9 +50,24 @@
     document.body.classList.toggle('player-expanded',open);
   }
   function toggleShuffle(){
-    shuffled=!shuffled;const now=queue[current];
-    queue=shuffled?[...tracks].sort(()=>Math.random()-.5):[...tracks];
-    current=now?queue.findIndex(t=>t.id===now.id):-1;sync();
+    shuffled=!shuffled;
+    const now=queue[current]||null;
+    if(shuffled){
+      const rest=tracks.filter(t=>!now||t.id!==now.id).sort(()=>Math.random()-.5);
+      queue=now?[now,...rest]:rest;
+      current=now?0:-1;
+    }else{
+      queue=[...tracks];
+      current=now?queue.findIndex(t=>t.id===now.id):-1;
+    }
+    sync();
+  }
+  function playRandom(){
+    if(!tracks.length)return;
+    let choices=tracks;
+    if(tracks.length>1&&queue[current])choices=tracks.filter(t=>t.id!==queue[current].id);
+    const pick=choices[Math.floor(Math.random()*choices.length)];
+    playTrack(pick);
   }
   function seekTo(value){if(audio.duration)audio.currentTime=audio.duration*Number(value)/1000;}
   function updateTimeline(){
@@ -70,6 +86,7 @@
   $('next').addEventListener('click',next);$('expanded-next').addEventListener('click',next);
   $('prev').addEventListener('click',previous);$('expanded-prev').addEventListener('click',previous);
   $('expanded-shuffle').addEventListener('click',toggleShuffle);
+  $('random-play').addEventListener('click',playRandom);
   $('expanded-seek').addEventListener('input',e=>seekTo(e.target.value));
 
   $('expanded-volume').addEventListener('input',e=>{audio.volume=Number(e.target.value);});
