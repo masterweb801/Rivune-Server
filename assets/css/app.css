@@ -38,3 +38,5 @@ body.player-expanded{overflow:hidden;}
   .expanded-player{padding-left:22px;padding-right:22px;}
   .expanded-content{gap:23px;}
 }
+
+@media(max-width:760px){.player{min-height:0;}body{padding-bottom:110px;}}
