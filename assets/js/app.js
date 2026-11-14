@@ -56,7 +56,6 @@
   function seekTo(value){if(audio.duration)audio.currentTime=audio.duration*Number(value)/1000;}
   function updateTimeline(){
     const elapsed=fmt(audio.currentTime), duration=fmt(audio.duration);
-    $('elapsed').textContent=elapsed;$('duration').textContent=duration;
     $('expanded-elapsed').textContent=elapsed;$('expanded-duration').textContent=duration;
     const progress=audio.duration?audio.currentTime/audio.duration*1000:0;
     $('expanded-seek').value=String(progress);
@@ -72,8 +71,8 @@
   $('prev').addEventListener('click',previous);$('expanded-prev').addEventListener('click',previous);
   $('expanded-shuffle').addEventListener('click',toggleShuffle);
   $('expanded-seek').addEventListener('input',e=>seekTo(e.target.value));
-  $('volume').addEventListener('input',e=>{$('expanded-volume').value=e.target.value;audio.volume=Number(e.target.value);});
-  $('expanded-volume').addEventListener('input',e=>{$('volume').value=e.target.value;audio.volume=Number(e.target.value);});
+
+  $('expanded-volume').addEventListener('input',e=>{audio.volume=Number(e.target.value);});
   audio.volume=.8;
   audio.addEventListener('timeupdate',updateTimeline);
   audio.addEventListener('loadedmetadata',updateTimeline);
