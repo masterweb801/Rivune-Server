@@ -16,7 +16,8 @@
       shuffleEnabled:shuffled,
       isPlaying:nativeMode?!!nativePlaybackState?.isPlaying:!audio.paused,
       positionMs:nativeMode?Number(nativePlaybackState?.positionMs||0):Math.round((audio.currentTime||0)*1000),
-      durationMs:nativeMode?Number(nativePlaybackState?.durationMs||0):Math.round((audio.duration||0)*1000)
+      durationMs:nativeMode?Number(nativePlaybackState?.durationMs||0):Math.round((audio.duration||0)*1000),
+      volume:nativeMode?Number(nativePlaybackState?.volume??0.8):audio.volume
     };
   }
   function sendNative(type,payload={}){
@@ -72,7 +73,7 @@
   }
   function togglePlayback(){
     if(nativeMode){
-      if(!queue.length&&tracks.length){playTrack(tracks[0]);return;}
+      if(current<0&&queue.length){playTrack(queue[0]);return;}
       sendNative(nativePlaybackState?.isPlaying?'pause':'play');return;
     }
     if(!audio.src&&tracks.length){playTrack(tracks[0]);return;}
@@ -133,9 +134,10 @@
     nativePlaybackState={
       isPlaying:!!state.isPlaying,
       positionMs:Math.max(0,Number(state.positionMs)||0),
-      durationMs:Math.max(0,Number(state.durationMs)||0)
+      durationMs:Math.max(0,Number(state.durationMs)||0),
+      volume:Math.min(1,Math.max(0,Number(state.volume??0.8)))
     };
-    sync();updateTimeline();return true;
+    $('expanded-volume').value=String(nativePlaybackState.volume);sync();updateTimeline();return true;
   }
   function onNativeError(input){
     const message=typeof input==='string'?input:String(input?.message||'Native playback error');
