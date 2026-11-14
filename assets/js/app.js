@@ -99,19 +99,28 @@
   $('mini-now').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpanded(true);}});
   const mini=$('mini-player');
   mini.addEventListener('pointerdown',e=>{
-    if(e.target.closest('button,input,label')){pointerStart=null;return;}
-    pointerStart={x:e.clientX,y:e.clientY};
+    pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId};
     if(mini.setPointerCapture)mini.setPointerCapture(e.pointerId);
   });
   mini.addEventListener('pointerup',e=>{
     if(!pointerStart)return;
-    const dy=e.clientY-pointerStart.y;pointerStart=null;
-    if(dy < -35)setExpanded(true);
+    const dy=e.clientY-pointerStart.y;
+    pointerStart=null;
+    if(dy < -28){e.preventDefault();setExpanded(true);}
   });
+  mini.addEventListener('pointercancel',()=>{pointerStart=null;});
   mini.addEventListener('click',e=>{if(!e.target.closest('button,input,label'))setExpanded(true);});
   const expanded=$('expanded-player');let expandedStart=null;
-  expanded.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,label')){expandedStart=null;return;}expandedStart={y:e.clientY};});
-  expanded.addEventListener('pointerup',e=>{if(expandedStart&&e.clientY-expandedStart.y>55)setExpanded(false);expandedStart=null;});
+  expanded.addEventListener('pointerdown',e=>{
+    if(e.target.closest('input')){expandedStart=null;return;}
+    expandedStart={y:e.clientY,id:e.pointerId};
+    if(expanded.setPointerCapture)expanded.setPointerCapture(e.pointerId);
+  });
+  expanded.addEventListener('pointerup',e=>{
+    if(expandedStart&&e.clientY-expandedStart.y>35){e.preventDefault();setExpanded(false);}
+    expandedStart=null;
+  });
+  expanded.addEventListener('pointercancel',()=>{expandedStart=null;});
   const saved=localStorage.getItem('rivune-theme');if(saved==='light')document.documentElement.dataset.theme='light';
   $('theme').addEventListener('click',()=>{const v=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=v;localStorage.setItem('rivune-theme',v);});
   load();updateTimeline();
