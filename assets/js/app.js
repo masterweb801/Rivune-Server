@@ -41,7 +41,7 @@
       info.append(title,sub);row.append(art,info,play);row.addEventListener('click',()=>playTrack(t));list.append(row);
     });
   }
-  function sync(){
+  function sync(renderList=true){
     const t=queue[current],playing=nativeMode?!!nativePlaybackState?.isPlaying:!audio.paused;
     $('now-title').textContent=t?.title||'Nothing playing';$('now-artist').textContent=t?.artist||'Choose a track';
     $('expanded-title').textContent=t?.title||'Nothing playing';$('expanded-artist').textContent=t?.artist||'Choose a track';
@@ -49,7 +49,7 @@
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
     $('expanded-shuffle').classList.toggle('selected',shuffled);
     $('expanded-shuffle').setAttribute('aria-pressed',shuffled?'true':'false');
-    render();
+    if(renderList)render();
   }
   function playTrack(t){
     if(shuffled){queue=[t,...tracks.filter(x=>x.id!==t.id).sort(()=>Math.random()-.5)];current=0;}
@@ -124,12 +124,14 @@
     if(Array.isArray(state.queueTrackIds)){
       const byId=new Map(tracks.map(t=>[String(t.id),t]));
       const nextQueue=state.queueTrackIds.map(id=>byId.get(String(id))).filter(Boolean);
-      if(nextQueue.length)queue=nextQueue;
+      queue=nextQueue;
+      if(!queue.length)current=-1;
     }
     if(state.trackId!==undefined&&state.trackId!==null){
       const idx=queue.findIndex(t=>String(t.id)===String(state.trackId));
-      if(idx>=0)current=idx;
-    }else if(Number.isInteger(state.currentIndex)&&state.currentIndex>=0&&state.currentIndex<queue.length){current=state.currentIndex;}
+      current=idx;
+    }else if(state.trackId===null){current=-1;}
+    else if(Number.isInteger(state.currentIndex)&&state.currentIndex>=0&&state.currentIndex<queue.length){current=state.currentIndex;}
     if(typeof state.shuffleEnabled==='boolean')shuffled=state.shuffleEnabled;
     nativePlaybackState={
       isPlaying:!!state.isPlaying,
@@ -137,7 +139,7 @@
       durationMs:Math.max(0,Number(state.durationMs)||0),
       volume:Math.min(1,Math.max(0,Number(state.volume??0.8)))
     };
-    $('expanded-volume').value=String(nativePlaybackState.volume);sync();updateTimeline();return true;
+    $('expanded-volume').value=String(nativePlaybackState.volume);sync(false);updateTimeline();return true;
   }
   function onNativeError(input){
     const message=typeof input==='string'?input:String(input?.message||'Native playback error');
