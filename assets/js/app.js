@@ -25,7 +25,7 @@
     $('expanded-title').textContent=t?.title||'Nothing playing';$('expanded-artist').textContent=t?.artist||'Choose a track';
     $('toggle').textContent=playing?'Ⅱ':'▶';$('expanded-toggle').textContent=playing?'Ⅱ':'▶';
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
-    $('shuffle').classList.toggle('selected',shuffled);$('expanded-shuffle').classList.toggle('selected',shuffled);
+    $('expanded-shuffle').classList.toggle('selected',shuffled);
     render();
   }
   function playTrack(t){
@@ -59,7 +59,7 @@
     $('elapsed').textContent=elapsed;$('duration').textContent=duration;
     $('expanded-elapsed').textContent=elapsed;$('expanded-duration').textContent=duration;
     const progress=audio.duration?audio.currentTime/audio.duration*1000:0;
-    $('seek').value=String(progress);$('expanded-seek').value=String(progress);
+    $('expanded-seek').value=String(progress);
     $('mini-progress').style.width=(audio.duration?progress/10:0)+'%';
   }
   async function load(){
@@ -70,8 +70,7 @@
   $('toggle').addEventListener('click',togglePlayback);$('expanded-toggle').addEventListener('click',togglePlayback);
   $('next').addEventListener('click',next);$('expanded-next').addEventListener('click',next);
   $('prev').addEventListener('click',previous);$('expanded-prev').addEventListener('click',previous);
-  $('shuffle').addEventListener('click',toggleShuffle);$('expanded-shuffle').addEventListener('click',toggleShuffle);
-  $('seek').addEventListener('input',e=>seekTo(e.target.value));
+  $('expanded-shuffle').addEventListener('click',toggleShuffle);
   $('expanded-seek').addEventListener('input',e=>seekTo(e.target.value));
   $('volume').addEventListener('input',e=>{$('expanded-volume').value=e.target.value;audio.volume=Number(e.target.value);});
   $('expanded-volume').addEventListener('input',e=>{$('volume').value=e.target.value;audio.volume=Number(e.target.value);});
