@@ -50,3 +50,9 @@ body.player-expanded{overflow:hidden;}
 /* Give the fixed mini-player breathing room below its controls. */
 .player{padding-bottom:calc(14px + env(safe-area-inset-bottom));}
 @media(max-width:760px){.player{padding-bottom:calc(16px + env(safe-area-inset-bottom));}}
+
+
+/* Keep vertical swipe gestures inside the player instead of letting the page consume them. */
+.player-inner{touch-action:none;}
+.expanded-player{touch-action:none;}
+.expanded-player input[type="range"]{touch-action:pan-x;}
