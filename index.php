@@ -8,7 +8,7 @@ require __DIR__ . '/lib/bootstrap.php';
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
 <title>RIVUNE — Music Without Boundaries</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css">
 </head><body>
-<header class="top"><a class="brand" href="./"><span class="brand-icon">♫</span><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme">◐</button></div></header>
+<header class="top"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme">◐</button></div></header>
 <main class="wrap">
 <section class="hero"><div><p class="eyebrow">YOUR SOUND. YOUR SPACE.</p><h1>Find your<br><span>next favourite.</span></h1><p class="lead">A music space made for listening. Explore the library and press play.</p><a href="#library" class="jump">Explore the library ↓</a></div><div class="hero-art" aria-hidden="true"><div class="disc"><span>R</span></div><i></i><b></b></div></section>
 <section id="library" class="library"><div class="section-head"><div><p class="eyebrow">THE COLLECTION</p><h2>All music</h2></div><span id="count" class="muted">Loading…</span></div>
