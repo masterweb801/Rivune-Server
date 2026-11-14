@@ -3,7 +3,7 @@
 .brand{min-width:0;max-width:100%;}
 .brand-logo{width:28px;height:28px;max-width:28px;max-height:28px;min-width:28px;min-height:28px;object-fit:contain;flex:0 0 28px;}
 .top,.admin-head{min-width:0;max-width:100%;}
-html,body{max-width:100%;overflow-x:hidden;}
+html,body{max-width:100%;overflow-x:clip;}
 
 /* Expandable listening player */
 .player-inner{position:relative;cursor:pointer;grid-template-columns:minmax(0,1fr) auto;min-height:82px;gap:18px;padding:10px 0;}
