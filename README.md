@@ -13,6 +13,7 @@ RIVUNE is a PHP/MySQL MP3 streaming website. The public can browse and listen wi
 - Persistent browser audio player with play/pause, previous/next, shuffle, seek and volume
 - Admin login with password hashing and session protection
 - Admin-only single-batch multi-file MP3 upload and delete
+- SHA-256 duplicate detection: identical audio content is skipped, even when filenames differ
 - Track titles automatically use filenames; optional artist and album values apply to the whole batch
 - One-time web installer
 - Protected persistent storage directory; audio is streamed through stream.php
