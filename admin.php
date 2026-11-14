@@ -132,42 +132,72 @@ if ($search!=='') {
 <?php else: ?><section class="admin-content"><div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div><form method="post"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button class="secondary">Sign out</button></form></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel"><div class="section-head"><h2>Current library</h2><span class="muted"><?= count($tracks) ?><?= $search!==''?' matching':'' ?> tracks</span></div><form method="get" action="admin.php" class="form" style="margin:0 0 18px"><label>Search songs<input type="search" name="q" value="<?= h($search) ?>" placeholder="Search title, artist or album" autocomplete="off"></label><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" type="submit">Search</button><?php if($search!==''): ?><a class="text-link" href="admin.php">Clear search</a><?php endif; ?></div></form><?php if(!$tracks): ?><p class="muted"><?= $search!==''?'No matching songs found.':'No music uploaded yet.' ?></p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><form method="post" action="admin.php<?= $search!==''?'?q='.rawurlencode($search):'' ?>" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div><?php endforeach; ?></div><?php endif; ?></section></section><?php endif; ?></main><?php if ($uploadSound): ?>
 <script>
 (function () {
-  function playUploadChime() {
+  var fallback = document.createElement('button');
+  fallback.type = 'button';
+  fallback.className = 'secondary';
+  fallback.textContent = 'Play upload sound';
+  fallback.style.margin = '0 0 16px';
+  fallback.hidden = true;
+
+  function showFallback() {
+    if (fallback.isConnected) return;
+    var notice = document.querySelector('.success');
+    if (notice) notice.insertAdjacentElement('afterend', fallback);
+    fallback.hidden = false;
+  }
+
+  async function playUploadChime() {
     var AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return false;
+    var ctx;
     try {
-      var ctx = new AudioCtx();
+      ctx = new AudioCtx();
+      if (ctx.state !== 'running') await ctx.resume();
+      if (ctx.state !== 'running') {
+        await ctx.close();
+        return false;
+      }
       var now = ctx.currentTime;
       [660, 880, 1100].forEach(function (frequency, index) {
         var oscillator = ctx.createOscillator();
         var gain = ctx.createGain();
-        var start = now + index * 0.13;
+        var start = now + index * 0.16;
         oscillator.type = 'sine';
         oscillator.frequency.value = frequency;
         gain.gain.setValueAtTime(0.0001, start);
         gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
         oscillator.connect(gain);
         gain.connect(ctx.destination);
         oscillator.start(start);
-        oscillator.stop(start + 0.2);
+        oscillator.stop(start + 0.24);
       });
-      window.setTimeout(function () { ctx.close(); }, 900);
+      window.setTimeout(function () { ctx.close(); }, 1100);
       return true;
-    } catch (e) { return false; }
+    } catch (e) {
+      if (ctx && ctx.state !== 'closed') {
+        try { await ctx.close(); } catch (ignore) {}
+      }
+      return false;
+    }
   }
-  if (!playUploadChime()) {
-    var fallback = document.createElement('button');
-    fallback.type = 'button';
-    fallback.className = 'secondary';
-    fallback.textContent = 'Play upload sound';
-    fallback.style.margin = '0 0 16px';
-    fallback.addEventListener('click', function () {
-      if (playUploadChime()) fallback.remove();
-    });
-    var notice = document.querySelector('.success');
-    if (notice) notice.insertAdjacentElement('afterend', fallback);
-  }
+
+  fallback.addEventListener('click', async function () {
+    fallback.disabled = true;
+    fallback.textContent = 'Playing…';
+    var played = await playUploadChime();
+    if (played) {
+      fallback.remove();
+    } else {
+      fallback.disabled = false;
+      fallback.textContent = 'Tap to play upload sound';
+    }
+  });
+
+  // Browsers may block audio until a user taps; never report a silent attempt as success.
+  playUploadChime().then(function (played) {
+    if (!played) showFallback();
+  });
 })();
 </script>
 <?php endif; ?>
