@@ -3,6 +3,28 @@ declare(strict_types=1);
 require __DIR__.'/lib/bootstrap.php';
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 
+// Add content hashes safely to existing installations, then backfill older tracks.
+try {
+  $columns = $pdo->query("SHOW COLUMNS FROM tracks LIKE 'file_hash'")->fetchAll();
+  if (!$columns) {
+    $pdo->exec("ALTER TABLE tracks ADD COLUMN file_hash CHAR(64) NULL");
+  }
+  $legacy = $pdo->query("SELECT id, stored_name FROM tracks WHERE file_hash IS NULL")->fetchAll();
+  if ($legacy) {
+    $saveHash = $pdo->prepare("UPDATE tracks SET file_hash=? WHERE id=? AND file_hash IS NULL");
+    foreach ($legacy as $oldTrack) {
+      $oldPath = __DIR__ . '/storage/music/' . basename((string)$oldTrack['stored_name']);
+      if (is_file($oldPath)) {
+        $oldHash = hash_file('sha256', $oldPath);
+        if ($oldHash !== false) $saveHash->execute([$oldHash, (int)$oldTrack['id']]);
+      }
+    }
+  }
+} catch (Throwable $e) {
+  http_response_code(500);
+  exit('RIVUNE could not prepare duplicate detection. Check that the database user has permission to alter the tracks table.');
+}
+
 // Detect real MPEG audio frames instead of relying on the hosting server's MIME label.
 function rivune_is_mp3(string $path): bool {
   $fp = @fopen($path, 'rb');
@@ -44,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       if (!is_dir($dir) && !mkdir($dir,0750,true) && !is_dir($dir)) {
         $error='Could not create storage/music. Check folder permissions.';
       } else {
-        $saved=0; $failed=[];
+        $saved=0; $failed=[]; $duplicates=[];
         $total=count($batch['name']);
         for ($i=0;$i<$total;$i++) {
           $name=(string)$batch['name'][$i];
@@ -64,14 +86,23 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           if ($ext!=='mp3' || !rivune_is_mp3($tmp)) {
             $failed[]=$name.': file does not contain a valid MP3 audio frame'; continue;
           }
+          $contentHash=hash_file('sha256',$tmp);
+          if ($contentHash===false) {
+            $failed[]=$name.': could not calculate file hash'; continue;
+          }
+          $dupe=$pdo->prepare('SELECT id FROM tracks WHERE file_hash=? LIMIT 1');
+          $dupe->execute([$contentHash]);
+          if ($dupe->fetch()) {
+            $duplicates[]=$name; continue;
+          }
           $title=pathinfo($name,PATHINFO_FILENAME);
           $stored=bin2hex(random_bytes(20)).'.mp3';
           if (!move_uploaded_file($tmp,$dir.'/'.$stored)) {
             $failed[]=$name.': could not save file'; continue;
           }
           try {
-            $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name) VALUES(?,?,?,?,?)');
-            $q->execute([substr($title,0,190),substr($sharedArtist,0,190),substr($sharedAlbum,0,190),basename($name),$stored]);
+            $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name,file_hash) VALUES(?,?,?,?,?,?)');
+            $q->execute([substr($title,0,190),substr($sharedArtist,0,190),substr($sharedAlbum,0,190),basename($name),$stored,$contentHash]);
             $saved++;
           } catch (Throwable $e) {
             @unlink($dir.'/'.$stored);
@@ -79,8 +110,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           }
         }
         if ($saved>0) { $notice=$saved.' track'.($saved===1?'':'s').' uploaded successfully.'; $uploadSound=true; }
+        if ($duplicates) $notice.=($notice?' ':'').count($duplicates).' duplicate file'.(count($duplicates)===1?' was':'s were').' skipped (identical audio already exists).';
         if ($failed) $error=count($failed).' file'.(count($failed)===1?'':'s').' could not be uploaded: '.implode(' | ',array_slice($failed,0,5)).(count($failed)>5?' | and '.(count($failed)-5).' more':'');
-        if ($saved===0 && !$failed) $error='No files were uploaded.';
+        if ($saved===0 && !$failed && !$duplicates) $error='No files were uploaded.';
+        if ($saved===0 && !$failed && $duplicates) $notice='All selected files were duplicates and were skipped.';
       }
     }
   } elseif ($action==='delete') {
