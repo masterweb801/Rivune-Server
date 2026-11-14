@@ -160,6 +160,20 @@ if ($search!=='') {
   var AudioCtx = window.AudioContext || window.webkitAudioContext;
   var audioContext = null;
   var audioUnlockPromise = Promise.resolve();
+  var progressWrap = document.createElement('div');
+  progressWrap.style.cssText = 'display:none;margin-top:12px;';
+  var progress = document.createElement('progress');
+  progress.max = 100;
+  progress.value = 0;
+  progress.style.cssText = 'display:block;width:100%;height:12px;accent-color:var(--accent,#a78bfa);';
+  var progressLabel = document.createElement('p');
+  progressLabel.className = 'muted';
+  progressLabel.style.cssText = 'margin:6px 0 0;font-size:13px;';
+  progressLabel.textContent = '0%';
+  progressWrap.appendChild(progress);
+  progressWrap.appendChild(progressLabel);
+  form.appendChild(progressWrap);
+
   var status = document.createElement('p');
   status.className = 'muted';
   status.setAttribute('role', 'status');
@@ -275,14 +289,44 @@ if ($search!=='') {
     }
     status.textContent = 'Uploading ' + fileInput.files.length + ' file(s)…';
     showMessage('', '');
+    progressWrap.style.display = 'block';
+    progress.value = 0;
+    progressLabel.textContent = '0%';
+    status.textContent = 'Starting upload…';
     try {
-      var response = await fetch(window.location.href, {
-        method: 'POST',
-        body: new FormData(form),
-        credentials: 'same-origin',
-        headers: {'X-Requested-With':'XMLHttpRequest'}
+      var result = await new Promise(function (resolve, reject) {
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', window.location.href, true);
+        xhr.withCredentials = true;
+        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+        xhr.upload.addEventListener('progress', function (event) {
+          if (!event.lengthComputable) {
+            progressLabel.textContent = 'Uploading…';
+            status.textContent = 'Uploading your files…';
+            return;
+          }
+          var percent = Math.min(100, Math.round((event.loaded / event.total) * 100));
+          progress.value = percent;
+          progressLabel.textContent = percent + '%';
+          status.textContent = percent >= 100 ? 'Upload sent. Saving tracks…' : 'Uploading your files…';
+        });
+        xhr.addEventListener('load', function () {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            reject(new Error('HTTP ' + xhr.status));
+            return;
+          }
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch (e) {
+            reject(e);
+          }
+        });
+        xhr.addEventListener('error', function () { reject(new Error('Network error')); });
+        xhr.addEventListener('abort', function () { reject(new Error('Upload cancelled')); });
+        xhr.send(new FormData(form));
       });
-      var result = await response.json();
+      progress.value = 100;
+      progressLabel.textContent = '100%';
       showMessage(result.error ? 'error' : 'success', [result.notice, result.error].filter(Boolean).join(' '));
       if (result.saved > 0) {
         await audioUnlockPromise;
