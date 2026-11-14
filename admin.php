@@ -24,7 +24,7 @@ function rivune_is_mp3(string $path): bool {
   }
   return false;
 }
-$error=''; $notice='';
+$error=''; $notice=''; $uploadSound=false; $search=trim((string)($_GET['q']??''));
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $failed[]=$name.': database insert failed';
           }
         }
-        if ($saved>0) $notice=$saved.' track'.($saved===1?'':'s').' uploaded successfully.';
+        if ($saved>0) { $notice=$saved.' track'.($saved===1?'':'s').' uploaded successfully.'; $uploadSound=true; }
         if ($failed) $error=count($failed).' file'.(count($failed)===1?'':'s').' could not be uploaded: '.implode(' | ',array_slice($failed,0,5)).(count($failed)>5?' | and '.(count($failed)-5).' more':'');
         if ($saved===0 && !$failed) $error='No files were uploaded.';
       }
@@ -88,7 +88,54 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); $notice='Track deleted.'; } }
   }
 }
-$tracks=$pdo->query('SELECT id,title,artist,album FROM tracks ORDER BY id DESC')->fetchAll();
+if ($search!=='') {
+  $q=$pdo->prepare("SELECT id,title,artist,album FROM tracks WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? ORDER BY id DESC");
+  $term='%'.$search.'%'; $q->execute([$term,$term,$term]); $tracks=$q->fetchAll();
+} else {
+  $tracks=$pdo->query('SELECT id,title,artist,album FROM tracks ORDER BY id DESC')->fetchAll();
+}
 ?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE Admin</title><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><span class="brand-icon">♫</span><span>RIVUNE<small>ADMIN STUDIO</small></span></a><a href="./" class="text-link">← Public site</a></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
 <?php if(!is_admin()): ?><section class="panel auth-panel"><p class="eyebrow">RESTRICTED AREA</p><h1>Administrator login</h1><form method="post" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="login"><label>Username<input name="username" required autocomplete="username"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary">Sign in</button></form></section>
-<?php else: ?><section class="admin-content"><div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div><form method="post"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button class="secondary">Sign out</button></form></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel"><div class="section-head"><h2>Current library</h2><span class="muted"><?= count($tracks) ?> tracks</span></div><?php if(!$tracks): ?><p class="muted">No music uploaded yet.</p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><form method="post" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div><?php endforeach; ?></div><?php endif; ?></section></section><?php endif; ?></main></body></html>
+<?php else: ?><section class="admin-content"><div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div><form method="post"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button class="secondary">Sign out</button></form></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel"><div class="section-head"><h2>Current library</h2><span class="muted"><?= count($tracks) ?><?= $search!==''?' matching':'' ?> tracks</span></div><form method="get" action="admin.php" class="form" style="margin:0 0 18px"><label>Search songs<input type="search" name="q" value="<?= h($search) ?>" placeholder="Search title, artist or album" autocomplete="off"></label><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" type="submit">Search</button><?php if($search!==''): ?><a class="text-link" href="admin.php">Clear search</a><?php endif; ?></div></form><?php if(!$tracks): ?><p class="muted"><?= $search!==''?'No matching songs found.':'No music uploaded yet.' ?></p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><form method="post" action="admin.php<?= $search!==''?'?q='.rawurlencode($search):'' ?>" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div><?php endforeach; ?></div><?php endif; ?></section></section><?php endif; ?></main><?php if ($uploadSound): ?>
+<script>
+(function () {
+  function playUploadChime() {
+    var AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return false;
+    try {
+      var ctx = new AudioCtx();
+      var now = ctx.currentTime;
+      [660, 880, 1100].forEach(function (frequency, index) {
+        var oscillator = ctx.createOscillator();
+        var gain = ctx.createGain();
+        var start = now + index * 0.13;
+        oscillator.type = 'sine';
+        oscillator.frequency.value = frequency;
+        gain.gain.setValueAtTime(0.0001, start);
+        gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.18);
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start(start);
+        oscillator.stop(start + 0.2);
+      });
+      window.setTimeout(function () { ctx.close(); }, 900);
+      return true;
+    } catch (e) { return false; }
+  }
+  if (!playUploadChime()) {
+    var fallback = document.createElement('button');
+    fallback.type = 'button';
+    fallback.className = 'secondary';
+    fallback.textContent = 'Play upload sound';
+    fallback.style.margin = '0 0 16px';
+    fallback.addEventListener('click', function () {
+      if (playUploadChime()) fallback.remove();
+    });
+    var notice = document.querySelector('.success');
+    if (notice) notice.insertAdjacentElement('afterend', fallback);
+  }
+})();
+</script>
+<?php endif; ?>
+</body></html>
