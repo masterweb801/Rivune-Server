@@ -56,3 +56,14 @@ body.player-expanded{overflow:hidden;}
 .player-inner{touch-action:none;}
 .expanded-player{touch-action:none;}
 .expanded-player input[type="range"]{touch-action:pan-x;}
+
+
+/* Keep the public navigation visible while scrolling, above page content and below the expanded player. */
+.top{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:color-mix(in srgb,var(--bg) 90%,transparent);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
