@@ -40,3 +40,9 @@ body.player-expanded{overflow:hidden;}
 }
 
 @media(max-width:760px){.player{min-height:0;}body{padding-bottom:110px;}}
+
+/* Random song action in the top navigation */
+.random-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:0 13px;border:1px solid #a78bfa66;border-radius:12px;background:linear-gradient(135deg,#7955dc,#5d42a8);color:#fff;font-size:12px;font-weight:750;white-space:nowrap;cursor:pointer;box-shadow:0 5px 18px #7955dc22;}
+.random-btn:hover{filter:brightness(1.12);}
+.random-btn:active{transform:scale(.97);}
+@media(max-width:500px){.top-actions{gap:8px}.random-btn{min-height:34px;padding:0 9px;font-size:11px}.public-tag{display:none;}}
