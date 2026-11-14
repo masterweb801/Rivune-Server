@@ -42,5 +42,5 @@ require __DIR__ . '/lib/bootstrap.php';
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-<audio id="audio" preload="metadata"></audio><script src="assets/js/app.js?v=player-6" defer></script>
+<audio id="audio" preload="auto" playsinline></audio><script src="assets/js/app.js?v=player-6" defer></script>
 </body></html>
