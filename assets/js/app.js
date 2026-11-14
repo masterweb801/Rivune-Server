@@ -86,6 +86,7 @@
   mini.addEventListener('pointerdown',e=>{
     if(e.target.closest('button,input,label')){pointerStart=null;return;}
     pointerStart={x:e.clientX,y:e.clientY};
+    if(mini.setPointerCapture)mini.setPointerCapture(e.pointerId);
   });
   mini.addEventListener('pointerup',e=>{
     if(!pointerStart)return;
