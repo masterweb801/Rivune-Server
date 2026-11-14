@@ -15,7 +15,7 @@ if (!is_file($file) || !is_readable($file)) { http_response_code(404); exit('Aud
 $size=filesize($file); if ($size===false || $size<1) { http_response_code(404); exit('Audio file is empty.'); }
 $start=0; $end=$size-1;
 header('Content-Type: audio/mpeg'); header('Accept-Ranges: bytes'); header('Content-Disposition: inline; filename="'.rawurlencode($track['original_name']).'"');
-header('Cache-Control: public, max-age=3600'); header('X-Content-Type-Options: nosniff');
+header('Cache-Control: public, max-age=3600'); header('X-Content-Type-Options: nosniff'); header('X-Accel-Buffering: no');
 if (isset($_SERVER['HTTP_RANGE']) && preg_match('/^bytes=(\d*)-(\d*)$/', trim($_SERVER['HTTP_RANGE']), $m)) {
   if ($m[1]==='' && $m[2]==='') { http_response_code(416); header("Content-Range: bytes */$size"); exit; }
   if ($m[1]==='') { $start=max(0,$size-(int)$m[2]); } else { $start=(int)$m[1]; }
