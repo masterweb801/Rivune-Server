@@ -6,7 +6,7 @@ require __DIR__ . '/lib/bootstrap.php';
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
-<title>RIVUNE — Music Without Boundaries</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css?v=player-1">
+<title>RIVUNE — Music Without Boundaries</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css?v=player-2">
 </head><body>
 <header class="top"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme">◐</button></div></header>
 <main class="wrap">
@@ -29,6 +29,8 @@ require __DIR__ . '/lib/bootstrap.php';
     </div>
     <div class="mini-progress"><span id="mini-progress"></span></div>
   </div>
+
+</aside>
   <section class="expanded-player" id="expanded-player" aria-hidden="true" aria-label="Full screen player">
     <div class="expanded-top"><button id="collapse-player" class="collapse-player" aria-label="Collapse player">⌄</button><span>NOW PLAYING</span><button id="expanded-shuffle" class="control" aria-label="Shuffle">⤨</button></div>
     <div class="expanded-content">
@@ -40,6 +42,5 @@ require __DIR__ . '/lib/bootstrap.php';
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-</aside>
-<audio id="audio" preload="metadata"></audio><script src="assets/js/app.js?v=player-1" defer></script>
+<audio id="audio" preload="metadata"></audio><script src="assets/js/app.js?v=player-2" defer></script>
 </body></html>
