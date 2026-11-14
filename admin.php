@@ -46,7 +46,7 @@ function rivune_is_mp3(string $path): bool {
   }
   return false;
 }
-$error=''; $notice=''; $uploadSound=false; $search=trim((string)($_GET['q']??''));
+$error=''; $notice=''; $search=trim((string)($_GET['q']??''));
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
@@ -116,6 +116,27 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         if ($saved===0 && !$failed && $duplicates) $notice='All selected files were duplicates and were skipped.';
       }
     }
+    if (($_POST['ajax_upload']??'')==='1') {
+      header('Content-Type: application/json; charset=utf-8');
+      $listQuery = $search !== ''
+        ? $pdo->prepare("SELECT id,title,artist,album FROM tracks WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? ORDER BY id DESC")
+        : $pdo->prepare("SELECT id,title,artist,album FROM tracks ORDER BY id DESC");
+      if ($search !== '') {
+        $term = '%'.$search.'%';
+        $listQuery->execute([$term,$term,$term]);
+      } else {
+        $listQuery->execute();
+      }
+      echo json_encode([
+        'ok' => $saved > 0 || (!empty($duplicates) && empty($failed)),
+        'saved' => $saved ?? 0,
+        'duplicates' => count($duplicates ?? []),
+        'notice' => $notice,
+        'error' => $error,
+        'tracks' => $listQuery->fetchAll()
+      ]);
+      exit;
+    }
   } elseif ($action==='delete') {
     require_admin(); $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
     if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); $notice='Track deleted.'; } }
@@ -129,74 +150,153 @@ if ($search!=='') {
 }
 ?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE Admin</title><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><span class="brand-icon">♫</span><span>RIVUNE<small>ADMIN STUDIO</small></span></a><a href="./" class="text-link">← Public site</a></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
 <?php if(!is_admin()): ?><section class="panel auth-panel"><p class="eyebrow">RESTRICTED AREA</p><h1>Administrator login</h1><form method="post" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="login"><label>Username<input name="username" required autocomplete="username"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary">Sign in</button></form></section>
-<?php else: ?><section class="admin-content"><div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div><form method="post"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button class="secondary">Sign out</button></form></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel"><div class="section-head"><h2>Current library</h2><span class="muted"><?= count($tracks) ?><?= $search!==''?' matching':'' ?> tracks</span></div><form method="get" action="admin.php" class="form" style="margin:0 0 18px"><label>Search songs<input type="search" name="q" value="<?= h($search) ?>" placeholder="Search title, artist or album" autocomplete="off"></label><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" type="submit">Search</button><?php if($search!==''): ?><a class="text-link" href="admin.php">Clear search</a><?php endif; ?></div></form><?php if(!$tracks): ?><p class="muted"><?= $search!==''?'No matching songs found.':'No music uploaded yet.' ?></p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><form method="post" action="admin.php<?= $search!==''?'?q='.rawurlencode($search):'' ?>" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div><?php endforeach; ?></div><?php endif; ?></section></section><?php endif; ?></main><?php if ($uploadSound): ?>
+<?php else: ?><section class="admin-content"><div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div><form method="post"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button class="secondary">Sign out</button></form></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form" data-ajax-upload><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><input type="hidden" name="ajax_upload" value="1"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel"><div class="section-head"><h2>Current library</h2><span class="muted"><?= count($tracks) ?><?= $search!==''?' matching':'' ?> tracks</span></div><form method="get" action="admin.php" class="form" style="margin:0 0 18px"><label>Search songs<input type="search" name="q" value="<?= h($search) ?>" placeholder="Search title, artist or album" autocomplete="off"></label><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" type="submit">Search</button><?php if($search!==''): ?><a class="text-link" href="admin.php">Clear search</a><?php endif; ?></div></form><?php if(!$tracks): ?><p class="muted"><?= $search!==''?'No matching songs found.':'No music uploaded yet.' ?></p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><form method="post" action="admin.php<?= $search!==''?'?q='.rawurlencode($search):'' ?>" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div><?php endforeach; ?></div><?php endif; ?></section></section><?php endif; ?></main>
+<?php if (is_admin()): ?>
 <script>
 (function () {
-  var fallback = document.createElement('button');
-  fallback.type = 'button';
-  fallback.className = 'secondary';
-  fallback.textContent = 'Play upload sound';
-  fallback.style.margin = '0 0 16px';
-  fallback.hidden = true;
+  var form = document.querySelector('[data-ajax-upload]');
+  if (!form) return;
 
-  function showFallback() {
-    if (fallback.isConnected) return;
-    var notice = document.querySelector('.success');
-    if (notice) notice.insertAdjacentElement('afterend', fallback);
-    fallback.hidden = false;
+  var AudioCtx = window.AudioContext || window.webkitAudioContext;
+  var audioContext = null;
+  var status = document.createElement('p');
+  status.className = 'muted';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  form.appendChild(status);
+
+  // Create/resume audio directly during the user's upload gesture.
+  function unlockAudio() {
+    if (!AudioCtx) return;
+    try {
+      if (!audioContext) audioContext = new AudioCtx();
+      if (audioContext.state !== 'running') {
+        var resumeResult = audioContext.resume();
+        if (resumeResult && resumeResult.catch) resumeResult.catch(function () {});
+      }
+    } catch (e) {}
   }
 
-  async function playUploadChime() {
-    var AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return false;
-    var ctx;
+  var uploadButton = form.querySelector('button[type="submit"],button:not([type])');
+  if (uploadButton) {
+    uploadButton.addEventListener('pointerdown', unlockAudio);
+    uploadButton.addEventListener('touchstart', unlockAudio, {passive:true});
+  }
+
+  function playUploadChime() {
+    if (!audioContext || audioContext.state !== 'running') return;
     try {
-      ctx = new AudioCtx();
-      if (ctx.state !== 'running') await ctx.resume();
-      if (ctx.state !== 'running') {
-        await ctx.close();
-        return false;
-      }
-      var now = ctx.currentTime;
+      var now = audioContext.currentTime;
       [660, 880, 1100].forEach(function (frequency, index) {
-        var oscillator = ctx.createOscillator();
-        var gain = ctx.createGain();
-        var start = now + index * 0.16;
+        var oscillator = audioContext.createOscillator();
+        var gain = audioContext.createGain();
+        var start = now + index * 0.15;
         oscillator.type = 'sine';
         oscillator.frequency.value = frequency;
         gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.exponentialRampToValueAtTime(0.12, start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.22);
+        gain.gain.exponentialRampToValueAtTime(0.14, start + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.23);
         oscillator.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(audioContext.destination);
         oscillator.start(start);
-        oscillator.stop(start + 0.24);
+        oscillator.stop(start + 0.25);
       });
-      window.setTimeout(function () { ctx.close(); }, 1100);
-      return true;
-    } catch (e) {
-      if (ctx && ctx.state !== 'closed') {
-        try { await ctx.close(); } catch (ignore) {}
-      }
-      return false;
+    } catch (e) {}
+  }
+
+  function showMessage(className, message) {
+    var existing = document.querySelector('.ajax-upload-message');
+    if (existing) existing.remove();
+    if (!message) return;
+    var node = document.createElement('p');
+    node.className = className + ' ajax-upload-message';
+    node.textContent = message;
+    form.parentNode.insertBefore(node, form);
+  }
+
+  function refreshTrackList(tracks) {
+    var list = document.querySelector('.admin-list');
+    var empty = document.querySelector('.panel .muted');
+    if (!list) {
+      list = document.createElement('div');
+      list.className = 'admin-list';
+      var libraryPanel = form.parentNode.nextElementSibling;
+      if (!libraryPanel) return;
+      var searchForm = libraryPanel.querySelector('form');
+      if (searchForm) searchForm.insertAdjacentElement('afterend', list);
+      else libraryPanel.appendChild(list);
+    }
+    list.replaceChildren();
+    tracks.forEach(function (track) {
+      var item = document.createElement('div');
+      item.className = 'admin-track';
+      var details = document.createElement('div');
+      var title = document.createElement('strong');
+      title.textContent = track.title;
+      var meta = document.createElement('small');
+      meta.textContent = track.artist + ' · ' + track.album;
+      details.appendChild(title);
+      details.appendChild(meta);
+      item.appendChild(details);
+      var deleteForm = document.createElement('form');
+      deleteForm.method = 'post';
+      deleteForm.action = 'admin.php';
+      deleteForm.onsubmit = function () { return confirm('Permanently delete this track?'); };
+      [['csrf', form.querySelector('[name="csrf"]').value], ['action', 'delete'], ['id', track.id]].forEach(function (pair) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = pair[0];
+        input.value = pair[1];
+        deleteForm.appendChild(input);
+      });
+      var button = document.createElement('button');
+      button.className = 'danger';
+      button.textContent = 'Delete';
+      deleteForm.appendChild(button);
+      item.appendChild(deleteForm);
+      list.appendChild(item);
+    });
+    var count = document.querySelector('.panel .section-head .muted');
+    if (count) count.textContent = tracks.length + (new URLSearchParams(window.location.search).has('q') ? ' matching' : '') + ' tracks';
+    if (!tracks.length) {
+      list.textContent = 'No music uploaded yet.';
     }
   }
 
-  fallback.addEventListener('click', async function () {
-    fallback.disabled = true;
-    fallback.textContent = 'Playing…';
-    var played = await playUploadChime();
-    if (played) {
-      fallback.remove();
-    } else {
-      fallback.disabled = false;
-      fallback.textContent = 'Tap to play upload sound';
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    unlockAudio();
+    var fileInput = form.querySelector('input[type="file"]');
+    if (!fileInput || !fileInput.files.length) return;
+    var button = uploadButton;
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Uploading…';
     }
-  });
-
-  // Browsers may block audio until a user taps; never report a silent attempt as success.
-  playUploadChime().then(function (played) {
-    if (!played) showFallback();
+    status.textContent = 'Uploading ' + fileInput.files.length + ' file(s)…';
+    showMessage('', '');
+    try {
+      var response = await fetch(window.location.href, {
+        method: 'POST',
+        body: new FormData(form),
+        credentials: 'same-origin',
+        headers: {'X-Requested-With':'XMLHttpRequest'}
+      });
+      var result = await response.json();
+      showMessage(result.error ? 'error' : 'success', [result.notice, result.error].filter(Boolean).join(' '));
+      if (result.saved > 0) playUploadChime();
+      if (result.tracks) refreshTrackList(result.tracks);
+      if (result.ok) form.reset();
+      status.textContent = result.saved > 0 ? 'Upload complete.' : 'Upload request finished.';
+    } catch (error) {
+      showMessage('error', 'Upload could not be completed. Check your connection and hosting upload limits, then try again.');
+      status.textContent = 'Upload failed.';
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Upload selected tracks';
+      }
+    }
   });
 })();
 </script>
