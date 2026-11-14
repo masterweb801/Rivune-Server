@@ -46,7 +46,7 @@ function rivune_is_mp3(string $path): bool {
   }
   return false;
 }
-$error=''; $notice=''; $search=trim((string)($_GET['q']??''));
+$error=''; $notice=''; $saved=0; $duplicates=[]; $failed=[]; $search=trim((string)($_GET['q']??''));
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
@@ -159,6 +159,7 @@ if ($search!=='') {
 
   var AudioCtx = window.AudioContext || window.webkitAudioContext;
   var audioContext = null;
+  var audioUnlockPromise = Promise.resolve();
   var status = document.createElement('p');
   status.className = 'muted';
   status.setAttribute('role', 'status');
@@ -171,8 +172,7 @@ if ($search!=='') {
     try {
       if (!audioContext) audioContext = new AudioCtx();
       if (audioContext.state !== 'running') {
-        var resumeResult = audioContext.resume();
-        if (resumeResult && resumeResult.catch) resumeResult.catch(function () {});
+        audioUnlockPromise = audioContext.resume().catch(function () {});
       }
     } catch (e) {}
   }
@@ -284,7 +284,10 @@ if ($search!=='') {
       });
       var result = await response.json();
       showMessage(result.error ? 'error' : 'success', [result.notice, result.error].filter(Boolean).join(' '));
-      if (result.saved > 0) playUploadChime();
+      if (result.saved > 0) {
+        await audioUnlockPromise;
+        playUploadChime();
+      }
       if (result.tracks) refreshTrackList(result.tracks);
       if (result.ok) form.reset();
       status.textContent = result.saved > 0 ? 'Upload complete.' : 'Upload request finished.';
