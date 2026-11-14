@@ -6,7 +6,7 @@ require __DIR__ . '/lib/bootstrap.php';
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
-<title>RIVUNE — Music Without Boundaries</title><link rel="stylesheet" href="assets/css/app.css">
+<title>RIVUNE — Music Without Boundaries</title><link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="stylesheet" href="assets/css/app.css">
 </head><body>
 <header class="top"><a class="brand" href="./"><span class="brand-icon">♫</span><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme">◐</button></div></header>
 <main class="wrap">
