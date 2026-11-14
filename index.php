@@ -15,7 +15,7 @@ require __DIR__ . '/lib/bootstrap.php';
 <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search songs, artists or albums" autocomplete="off"></label>
 <div id="tracks" class="tracks"><div class="empty">Loading the music library…</div></div></section>
 </main>
-<footer><span>RIVUNE</span><a href="admin.php">Admin</a></footer>
+<footer><span>RIVUNE</span><span>Music for everyone.</span></footer>
 <aside class="player" aria-label="Audio player"><div class="player-inner"><div class="now"><div id="cover" class="cover">♫</div><div class="now-copy"><strong id="now-title">Nothing playing</strong><span id="now-artist">Choose a track</span></div></div><div class="transport"><div class="controls"><button id="shuffle" class="control" title="Shuffle" aria-label="Shuffle">⤨</button><button id="prev" class="control" aria-label="Previous">|◀</button><button id="toggle" class="play" aria-label="Play">▶</button><button id="next" class="control" aria-label="Next">▶|</button></div><div class="timeline"><time id="elapsed">0:00</time><input id="seek" type="range" min="0" max="1000" value="0"><time id="duration">0:00</time></div></div><label class="volume">♫ <input id="volume" type="range" min="0" max="1" step=".01" value=".8"></label></div></aside>
 <audio id="audio" preload="metadata"></audio><script src="assets/js/app.js" defer></script>
 </body></html>
