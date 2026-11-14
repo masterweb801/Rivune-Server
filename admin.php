@@ -29,12 +29,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           $tmp=(string)$batch['tmp_name'][$i];
           $code=(int)$batch['error'][$i];
           if ($code!==UPLOAD_ERR_OK) {
-            $reason=match($code) {
-              UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'file exceeds the server upload limit',
-              UPLOAD_ERR_PARTIAL => 'upload was interrupted',
-              UPLOAD_ERR_NO_FILE => 'no file selected',
-              default => 'upload error '.$code
-            };
+            if ($code===UPLOAD_ERR_INI_SIZE || $code===UPLOAD_ERR_FORM_SIZE) $reason='file exceeds the server upload limit';
+            elseif ($code===UPLOAD_ERR_PARTIAL) $reason='upload was interrupted';
+            elseif ($code===UPLOAD_ERR_NO_FILE) $reason='no file selected';
+            else $reason='upload error '.$code;
             $failed[]=$name.': '.$reason; continue;
           }
           if (!is_uploaded_file($tmp) || (int)$batch['size'][$i]<1 || (int)$batch['size'][$i]>25*1024*1024) {
