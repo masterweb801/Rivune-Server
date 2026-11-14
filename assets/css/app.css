@@ -46,3 +46,7 @@ body.player-expanded{overflow:hidden;}
 .random-btn:hover{filter:brightness(1.12);}
 .random-btn:active{transform:scale(.97);}
 @media(max-width:500px){.top-actions{gap:8px}.random-btn{min-height:34px;padding:0 9px;font-size:11px}.public-tag{display:none;}}
+
+/* Give the fixed mini-player breathing room below its controls. */
+.player{padding-bottom:calc(14px + env(safe-area-inset-bottom));}
+@media(max-width:760px){.player{padding-bottom:calc(16px + env(safe-area-inset-bottom));}}
