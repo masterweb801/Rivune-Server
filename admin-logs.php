@@ -63,10 +63,7 @@ $base = 'admin-logs.php?event=' . rawurlencode($event) . '&status=' . rawurlenco
 </head>
 <body>
 <main class="logs-wrap">
-<header class="logs-top">
-  <a class="brand" href="admin.php"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ACTIVITY LOGS</small></span></a>
-  <a class="text-link" href="admin.php">← Back to Admin</a>
-</header>
+<?php $adminActivePage = 'logs'; require __DIR__ . '/lib/admin_navigation.php'; ?>
 <section class="logs-card">
   <p class="eyebrow">ADMIN AUDIT TRAIL</p>
   <h1>Activity logs</h1>
