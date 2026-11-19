@@ -39,7 +39,7 @@ Additional views:
 - Estimated time to capacity only when a meaningful quota and measured growth history exist.
 - Configurable warning thresholds (default 75%, 90%, and 95%).
 
-Important: PHP filesystem scans only measure files the application can access. Do not label RIVUNE's measured directory total as the entire hosting-account usage. If InfinityFree does not expose an account quota through a supported interface, show the hosting quota as "Unavailable" and continue showing measured RIVUNE usage.
+Important: PHP filesystem scans only measure files the application can access. InfinityFree does not expose the account quota to PHP. The owner has supplied 4.5 GB as a reference allowance; show measured RIVUNE usage against that reference as an estimate, never as a live hosting-panel measurement. Other account files may not be included. Allow an explicit `rivune_app_storage_limit_bytes` configuration override.
 
 ### 2. System Health
 
