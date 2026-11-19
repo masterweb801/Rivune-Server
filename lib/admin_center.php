@@ -38,7 +38,10 @@ function rivune_admin_format_bytes(int $bytes): string {
 }
 
 function rivune_admin_storage(PDO $pdo): array {
-  if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['rivune_storage_cache'], $_SESSION['rivune_storage_cache_at']) && time() - (int)$_SESSION['rivune_storage_cache_at'] < 900) {
+  // InfinityFree does not expose account quota to PHP. Use the owner's stated
+  // 4.5 GB allowance as a reference, not as a live hosting-panel measurement.
+  $quotaReference = 4.5 * 1024 * 1024 * 1024;
+  if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['rivune_storage_cache'], $_SESSION['rivune_storage_cache_at']) && (int)($_SESSION['rivune_storage_cache']['quota_reference_bytes'] ?? 0) === (int)$quotaReference && time() - (int)$_SESSION['rivune_storage_cache_at'] < 900) {
     return $_SESSION['rivune_storage_cache'];
   }
   $root = dirname(__DIR__);
@@ -54,10 +57,15 @@ function rivune_admin_storage(PDO $pdo): array {
     // Shared hosts may deny information_schema access; report unavailable, never guess.
   }
   $measured = $music['bytes'] + $artwork['bytes'] + $assets['bytes'] + ($dbBytes ?? 0);
+  $remaining = max(0, (int)$quotaReference - $measured);
+  $usagePercent = ($measured / $quotaReference) * 100;
   $result = [
     'music'=>$music, 'artwork'=>$artwork, 'assets'=>$assets,
     'database'=>$dbBytes, 'measured'=>$measured,
-    'hosting_quota'=>null, 'hosting_used'=>null, 'hosting_remaining'=>null,
+    'hosting_quota'=>(int)$quotaReference, 'hosting_used'=>$measured,
+    'hosting_remaining'=>$remaining, 'hosting_percent'=>$usagePercent,
+    'quota_reference_bytes'=>(int)$quotaReference,
+    'quota_is_live'=>false,
     'partial'=>$music['truncated'] || $artwork['truncated'] || $assets['truncated']
   ];
   if (session_status() === PHP_SESSION_ACTIVE) {
