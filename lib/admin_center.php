@@ -38,6 +38,9 @@ function rivune_admin_format_bytes(int $bytes): string {
 }
 
 function rivune_admin_storage(PDO $pdo): array {
+  if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['rivune_storage_cache'], $_SESSION['rivune_storage_cache_at']) && time() - (int)$_SESSION['rivune_storage_cache_at'] < 60) {
+    return $_SESSION['rivune_storage_cache'];
+  }
   $root = dirname(__DIR__);
   $music = rivune_admin_dir_size($root . '/storage/music');
   $artwork = rivune_admin_dir_size($root . '/public/assets');
@@ -51,12 +54,17 @@ function rivune_admin_storage(PDO $pdo): array {
     // Shared hosts may deny information_schema access; report unavailable, never guess.
   }
   $measured = $music['bytes'] + $artwork['bytes'] + $assets['bytes'] + ($dbBytes ?? 0);
-  return [
+  $result = [
     'music'=>$music, 'artwork'=>$artwork, 'assets'=>$assets,
     'database'=>$dbBytes, 'measured'=>$measured,
     'hosting_quota'=>null, 'hosting_used'=>null, 'hosting_remaining'=>null,
     'partial'=>$music['truncated'] || $artwork['truncated'] || $assets['truncated']
   ];
+  if (session_status() === PHP_SESSION_ACTIVE) {
+    $_SESSION['rivune_storage_cache'] = $result;
+    $_SESSION['rivune_storage_cache_at'] = time();
+  }
+  return $result;
 }
 
 function rivune_admin_diagnostics(PDO $pdo): array {
