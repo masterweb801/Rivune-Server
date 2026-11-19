@@ -168,7 +168,7 @@ $issueCount = is_array($scan) ? array_sum($scan['counts']) : 0;
 <main class="integrity-wrap">
 <header class="integrity-top">
   <a class="brand" href="admin.php"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>FILE INTEGRITY</small></span></a>
-  <a class="text-link" href="admin.php">← Back to Admin</a>
+  <nav style="display:flex;gap:14px;flex-wrap:wrap"><a class="text-link" href="admin-logs.php">Activity logs</a><a class="text-link" href="admin.php">← Back to Admin</a></nav>
 </header>
 <section class="integrity-card">
   <p class="eyebrow">READ-ONLY DIAGNOSTICS</p>
