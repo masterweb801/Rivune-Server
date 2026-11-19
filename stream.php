@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/maintenance.php';
+rivune_maintenance_enforce($pdo, 'text');
 // Streaming is public: release the PHP session lock before sending audio bytes.
 if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
 // Avoid PHP output buffering delaying the first audio bytes.
