@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/maintenance.php';
+rivune_maintenance_enforce($pdo, 'json');
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
