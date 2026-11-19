@@ -36,7 +36,7 @@ $state = $ready ? rivune_maintenance_state($pdo) : ['enabled'=>false,'message'=>
 </style>
 </head>
 <body><main class="mwrap">
-<header class="mtop"><a class="brand" href="admin.php"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MAINTENANCE CONTROL</small></span></a><nav style="display:flex;gap:14px;flex-wrap:wrap"><a class="text-link" href="admin-logs.php">Activity logs</a><a class="text-link" href="admin.php">← Admin</a></nav></header>
+<?php $adminActivePage = 'maintenance'; require __DIR__ . '/lib/admin_navigation.php'; ?>
 <section class="mcard">
 <p class="eyebrow">PUBLIC AVAILABILITY</p><h1>Maintenance mode</h1>
 <?php if(isset($_GET['saved'])): ?><p class="success">Maintenance settings saved.</p><?php endif; ?>
