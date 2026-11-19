@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__.'/lib/bootstrap.php';
 require_once __DIR__.'/lib/admin_center.php';
+require_once __DIR__.'/lib/admin_logs.php';
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 
 // Add content hashes safely to existing installations, then backfill older tracks.
@@ -52,9 +53,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
     if (hash_equals($config['admin_user'],trim($_POST['username']??'')) && password_verify((string)($_POST['password']??''),$config['admin_pass_hash'])) {
+      rivune_admin_log($pdo, 'login', 'success', 'Administrator signed in.');
       session_regenerate_id(true); $_SESSION['admin_id']=1; $_SESSION['csrf']=bin2hex(random_bytes(32)); header('Location: admin.php'); exit;
-    } else $error='Incorrect username or password.';
-  } elseif ($action==='logout') { $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
+    } else { rivune_admin_log($pdo, 'login', 'failure', 'An administrator sign-in attempt failed.'); $error='Incorrect username or password.'; }
+  } elseif ($action==='logout') { rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
   elseif ($action==='upload') {
     require_admin();
     $batch=$_FILES['mp3']??null;
@@ -117,6 +119,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         if ($saved===0 && !$failed && $duplicates) $notice='All selected files were duplicates and were skipped.';
       }
     }
+    if ($saved > 0 || $duplicates || $failed) {
+      $uploadStatus = $failed ? (($saved > 0 || $duplicates) ? 'warning' : 'failure') : 'success';
+      rivune_admin_log($pdo, 'upload', $uploadStatus, 'Upload batch: '.$saved.' saved, '.count($duplicates).' duplicate(s) skipped, '.count($failed).' failed.');
+    }
     if (($_POST['ajax_upload']??'')==='1') {
       header('Content-Type: application/json; charset=utf-8');
       $listQuery = $search !== ''
@@ -140,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
   } elseif ($action==='delete') {
     require_admin(); $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
-    if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); $notice='Track deleted.'; } }
+    if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); rivune_admin_log($pdo, 'delete', 'success', 'Deleted track record #'.(int)$id.'.'); $notice='Track deleted.'; } }
   }
 }
 if ($search!=='') {
@@ -149,7 +155,7 @@ if ($search!=='') {
 } else {
   $tracks=$pdo->query('SELECT id,title,artist,album FROM tracks ORDER BY id DESC')->fetchAll();
 }
-?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE | Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ADMIN STUDIO</small></span></a><nav class="admin-quick-links" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><a href="admin-integrity.php" class="text-link">File integrity</a><a href="./" class="text-link">← Public site</a></nav></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
+?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE | Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ADMIN STUDIO</small></span></a><nav class="admin-quick-links" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><a href="admin-integrity.php" class="text-link">File integrity</a><a href="admin-logs.php" class="text-link">Activity logs</a><a href="./" class="text-link">← Public site</a></nav></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
 <?php if(!is_admin()): ?><section class="panel auth-panel"><p class="eyebrow">RESTRICTED AREA</p><h1>Administrator login</h1><form method="post" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="login"><label>Username<input name="username" required autocomplete="username"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary">Sign in</button></form></section>
 <?php else:
 $adminStorage = rivune_admin_storage($pdo);
