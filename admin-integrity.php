@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/admin_logs.php';
 require_admin();
 
 function rivune_integrity_is_mp3(string $path): bool {
@@ -49,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         rivune_integrity_finding($scan, 'duplicates', 'SHA-256 duplicate group: ' . (int)$dupe['copies'] . ' tracks share a hash (first track ID ' . (int)$dupe['first_id'] . ').');
       }
       $_SESSION['rivune_integrity_scan'] = $scan;
+      rivune_admin_log($pdo, 'integrity_scan', 'info', 'Started a read-only music library integrity scan.');
     } catch (Throwable $e) {
       $error = 'Could not start the integrity scan. Check database permissions and try again.';
     }
@@ -121,6 +123,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
         }
         $_SESSION['rivune_integrity_scan'] = $scan;
+        if (!empty($scan['tracks_done']) && !empty($scan['files_done'])) {
+          rivune_admin_log($pdo, 'integrity_scan', 'success', 'Completed integrity scan: '.(int)$scan['tracks_checked'].' database records and '.(int)$scan['files_checked'].' files checked; '.array_sum($scan['counts']).' finding(s).');
+        }
       } catch (Throwable $e) {
         $error = 'The scan encountered an error. Completed findings have been preserved; you can retry the next batch.';
         $_SESSION['rivune_integrity_scan'] = $scan;
@@ -128,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   } elseif ($action === 'clear') {
     unset($_SESSION['rivune_integrity_scan']);
+    rivune_admin_log($pdo, 'integrity_scan', 'info', 'Cleared the integrity scan report from the session.');
   }
 }
 
