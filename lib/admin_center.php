@@ -38,7 +38,7 @@ function rivune_admin_format_bytes(int $bytes): string {
 }
 
 function rivune_admin_storage(PDO $pdo): array {
-  if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['rivune_storage_cache'], $_SESSION['rivune_storage_cache_at']) && time() - (int)$_SESSION['rivune_storage_cache_at'] < 60) {
+  if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['rivune_storage_cache'], $_SESSION['rivune_storage_cache_at']) && time() - (int)$_SESSION['rivune_storage_cache_at'] < 900) {
     return $_SESSION['rivune_storage_cache'];
   }
   $root = dirname(__DIR__);
@@ -68,6 +68,7 @@ function rivune_admin_storage(PDO $pdo): array {
 }
 
 function rivune_admin_diagnostics(PDO $pdo): array {
+  if (session_status() === PHP_SESSION_ACTIVE && isset($_SESSION['rivune_health_cache'], $_SESSION['rivune_health_cache_at']) && time() - (int)$_SESSION['rivune_health_cache_at'] < 900) return $_SESSION['rivune_health_cache'];
   $checks = [];
   $checks[] = ['label'=>'Database connection', 'ok'=>true, 'detail'=>'Connected and query execution available.'];
   try {
@@ -97,5 +98,7 @@ function rivune_admin_diagnostics(PDO $pdo): array {
     $checks[] = ['label'=>$item[0], 'ok'=>$ok, 'detail'=>$detail];
   }
   $okCount = count(array_filter($checks, static fn($check)=>$check['ok']));
-  return ['checks'=>$checks, 'passed'=>$okCount, 'total'=>count($checks), 'healthy'=>$okCount===count($checks)];
+  $result = ['checks'=>$checks, 'passed'=>$okCount, 'total'=>count($checks), 'healthy'=>$okCount===count($checks)];
+  if (session_status() === PHP_SESSION_ACTIVE) { $_SESSION['rivune_health_cache']=$result; $_SESSION['rivune_health_cache_at']=time(); }
+  return $result;
 }
