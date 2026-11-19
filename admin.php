@@ -6,27 +6,7 @@ require_once __DIR__.'/lib/admin_logs.php';
 require_once __DIR__.'/lib/admin_alerts.php';
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 
-// Add content hashes safely to existing installations, then backfill older tracks.
-try {
-  $columns = $pdo->query("SHOW COLUMNS FROM tracks LIKE 'file_hash'")->fetchAll();
-  if (!$columns) {
-    $pdo->exec("ALTER TABLE tracks ADD COLUMN file_hash CHAR(64) NULL");
-  }
-  $legacy = $pdo->query("SELECT id, stored_name FROM tracks WHERE file_hash IS NULL")->fetchAll();
-  if ($legacy) {
-    $saveHash = $pdo->prepare("UPDATE tracks SET file_hash=? WHERE id=? AND file_hash IS NULL");
-    foreach ($legacy as $oldTrack) {
-      $oldPath = __DIR__ . '/storage/music/' . basename((string)$oldTrack['stored_name']);
-      if (is_file($oldPath)) {
-        $oldHash = hash_file('sha256', $oldPath);
-        if ($oldHash !== false) $saveHash->execute([$oldHash, (int)$oldTrack['id']]);
-      }
-    }
-  }
-} catch (Throwable $e) {
-  http_response_code(500);
-  exit('RIVUNE could not prepare duplicate detection. Check that the database user has permission to alter the tracks table.');
-}
+// Hash column is provisioned during installation; legacy hashes are not backfilled on page startup.
 
 // Detect real MPEG audio frames instead of relying on the hosting server's MIME label.
 function rivune_is_mp3(string $path): bool {
@@ -49,7 +29,8 @@ function rivune_is_mp3(string $path): bool {
   }
   return false;
 }
-$error=''; $notice=''; $saved=0; $duplicates=[]; $failed=[]; $search=trim((string)($_GET['q']??''));
+$error=''; $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_admin_notice']); $saved=0; $duplicates=[]; $failed=[]; $search=trim((string)($_GET['q']??''));
+$page=max(1,(int)($_GET['page']??1)); $perPage=25;
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
@@ -147,18 +128,35 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       ]);
       exit;
     }
+  } elseif ($action==='refresh_storage') {
+    require_admin();
+    unset($_SESSION['rivune_storage_cache'], $_SESSION['rivune_storage_cache_at']);
+    $snapshot=rivune_admin_storage($pdo);
+    rivune_alert_check_storage($pdo,$snapshot,$config);
+    $_SESSION['rivune_admin_notice']='Storage measurements refreshed.';
+    header('Location: admin.php'); exit;
+  } elseif ($action==='refresh_health') {
+    require_admin();
+    unset($_SESSION['rivune_health_cache'], $_SESSION['rivune_health_cache_at']);
+    $health=rivune_admin_diagnostics($pdo);
+    foreach ($health['checks'] as $diagnostic) if (!$diagnostic['ok']) rivune_alert_raise($pdo,'system_'.substr(sha1($diagnostic['label']),0,12),'critical','System check failed: '.$diagnostic['label'],$diagnostic['detail']);
+    $_SESSION['rivune_admin_notice']='System diagnostics completed.';
+    header('Location: admin.php'); exit;
   } elseif ($action==='delete') {
     require_admin(); $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
     if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); rivune_admin_log($pdo, 'delete', 'success', 'Deleted track record #'.(int)$id.'.'); $notice='Track deleted.'; } }
   }
 }
-if ($search!=='') {
-  $q=$pdo->prepare("SELECT id,title,artist,album FROM tracks WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? ORDER BY id DESC");
-  $term='%'.$search.'%'; $q->execute([$term,$term,$term]); $tracks=$q->fetchAll();
-} else {
-  $tracks=$pdo->query('SELECT id,title,artist,album FROM tracks ORDER BY id DESC')->fetchAll();
-}
-?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE | Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ADMIN STUDIO</small></span></a><nav class="admin-quick-links" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><a href="admin-integrity.php" class="text-link">File integrity</a><a href="admin-logs.php" class="text-link">Activity logs</a><a href="admin-alerts.php" class="text-link">Alerts</a><a href="admin-backups.php" class="text-link">Backup &amp; Export</a><a href="admin-maintenance.php" class="text-link">Maintenance</a><a href="./" class="text-link">← Public site</a></nav></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
+$where = $search !== '' ? " WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?" : '';
+$countTracks = $pdo->prepare('SELECT COUNT(*) FROM tracks'.$where);
+if ($search !== '') { $term='%'.$search.'%'; $countTracks->execute([$term,$term,$term]); } else { $countTracks->execute(); }
+$totalTracks=(int)$countTracks->fetchColumn();
+$totalPages=max(1,(int)ceil($totalTracks/$perPage));
+$page=min($page,$totalPages);
+$listQuery=$pdo->prepare('SELECT id,title,artist,album FROM tracks'.$where.' ORDER BY id DESC LIMIT '.$perPage.' OFFSET '.(($page-1)*$perPage));
+if ($search !== '') $listQuery->execute([$term,$term,$term]); else $listQuery->execute();
+$tracks=$listQuery->fetchAll();
+?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE | Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ADMIN STUDIO</small></span></a><?php if(is_admin()): ?><details class="admin-mobile-menu"><summary>☰ <span>Menu</span></summary><nav class="admin-quick-links"><a href="admin.php">Overview &amp; Music</a><a href="admin-integrity.php">File integrity</a><a href="admin-logs.php">Activity logs</a><a href="admin-alerts.php">Alerts</a><a href="admin-backups.php">Backup &amp; Export</a><a href="admin-maintenance.php">Maintenance</a><a href="./">← Public site</a></nav></details><nav class="admin-desktop-links"><a href="admin-integrity.php">File integrity</a><a href="admin-logs.php">Activity logs</a><a href="admin-alerts.php">Alerts</a><a href="admin-backups.php">Backup &amp; Export</a><a href="admin-maintenance.php">Maintenance</a><a href="./">← Public site</a></nav><?php endif; ?></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
 <?php if(!is_admin()): ?><section class="panel auth-panel"><p class="eyebrow">RESTRICTED AREA</p><h1>Administrator login</h1><form method="post" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="login"><label>Username<input name="username" required autocomplete="username"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary">Sign in</button></form></section>
 <?php else:
 $adminStorage = rivune_admin_storage($pdo);
