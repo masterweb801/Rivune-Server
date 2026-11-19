@@ -55,7 +55,9 @@ function rivune_alert_open_count(PDO $pdo): int {
 function rivune_alert_check_storage(PDO $pdo, array $storage, array $config): void {
   // Hosting quota is intentionally not inferred. Only use an explicit app limit
   // configured by the site owner, and only when the measurement is complete.
-  $limit = isset($config['rivune_app_storage_limit_bytes']) ? (int)$config['rivune_app_storage_limit_bytes'] : 0;
+  // Prefer an explicit owner override; otherwise use the owner's stated
+  // InfinityFree 4.5 GB allowance as a clearly labelled reference estimate.
+  $limit = isset($config['rivune_app_storage_limit_bytes']) ? (int)$config['rivune_app_storage_limit_bytes'] : (int)(4.5 * 1024 * 1024 * 1024);
   if ($limit <= 0 || !empty($storage['partial'])) return;
   $used = (int)($storage['measured'] ?? 0);
   $percent = ($used / $limit) * 100;
