@@ -110,8 +110,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if (($_POST['ajax_upload']??'')==='1') {
       header('Content-Type: application/json; charset=utf-8');
       $listQuery = $search !== ''
-        ? $pdo->prepare("SELECT id,title,artist,album FROM tracks WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? ORDER BY id DESC")
-        : $pdo->prepare("SELECT id,title,artist,album FROM tracks ORDER BY id DESC");
+        ? $pdo->prepare("SELECT id,title,artist,album FROM tracks WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? ORDER BY id DESC LIMIT 25 OFFSET ".(($page-1)*25))
+        : $pdo->prepare("SELECT id,title,artist,album FROM tracks ORDER BY id DESC LIMIT 25 OFFSET ".(($page-1)*25));
       if ($search !== '') {
         $term = '%'.$search.'%';
         $listQuery->execute([$term,$term,$term]);
