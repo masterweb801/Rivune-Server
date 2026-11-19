@@ -4,8 +4,8 @@ require __DIR__ . '/lib/bootstrap.php';
 require_once __DIR__ . '/lib/admin_logs.php';
 require_admin();
 
-// Ensure the log table exists even before the first recorded action.
-rivune_admin_log($pdo, 'admin_action', 'info', 'Activity log page opened.');
+// Initialize the audit table without recording page views as activity.
+rivune_admin_logs_ensure($pdo);
 
 $allowedEvents = ['all','login','logout','upload','delete','integrity_scan','backup','restore','maintenance','alert','admin_action'];
 $allowedStatuses = ['all','success','failure','warning','info'];
