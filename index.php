@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/maintenance.php';
+rivune_maintenance_enforce($pdo, 'html');
 ?><!doctype html>
 <html lang="en" data-theme="dark">
 <head>
