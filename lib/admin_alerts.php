@@ -59,9 +59,9 @@ function rivune_alert_check_storage(PDO $pdo, array $storage, array $config): vo
   if ($limit <= 0 || !empty($storage['partial'])) return;
   $used = (int)($storage['measured'] ?? 0);
   $percent = ($used / $limit) * 100;
-  foreach ([95=>'critical',90=>'warning',75=>'warning'] as $threshold=>$severity) {
-    if ($percent >= $threshold) {
-      rivune_alert_raise($pdo, 'storage_'.$threshold, $severity, 'RIVUNE storage at '.$threshold.'%', 'Measured application storage is '.number_format($percent,1).'% of the explicitly configured application limit.');
-    }
+  $threshold = $percent >= 95 ? 95 : ($percent >= 90 ? 90 : ($percent >= 75 ? 75 : 0));
+  if ($threshold > 0) {
+    $severity = $threshold >= 95 ? 'critical' : 'warning';
+    rivune_alert_raise($pdo, 'storage_'.$threshold, $severity, 'RIVUNE storage at '.$threshold.'%', 'Measured application storage is '.number_format($percent,1).'% of the explicitly configured application limit.');
   }
 }
