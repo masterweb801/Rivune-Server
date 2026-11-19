@@ -14,8 +14,7 @@ if (!$ready) {
   $enabled = isset($_POST['enabled']) && $_POST['enabled'] === '1';
   $message = trim((string)($_POST['message'] ?? ''));
   if ($message === '') $message = 'We are making a few improvements. Please check back soon.';
-  $message = substr($message, 0, 500);
-  $previous = rivune_maintenance_state($pdo);
+  $message = preg_replace('/^(.{0,500}).*$/us', '$1', $message) ?? substr($message, 0, 500);
   if (rivune_maintenance_save($pdo, $enabled, $message)) {
     $eventMessage = $enabled ? 'Maintenance mode enabled for public visitors.' : 'Maintenance mode disabled; public listening restored.';
     rivune_admin_log($pdo, 'maintenance', 'success', $eventMessage);
