@@ -97,3 +97,30 @@ body.player-expanded{overflow:hidden;}
 .admin-warning{padding:10px 12px;border-radius:9px;background:#e7a93b18;color:#e7b65c;font-size:11px;}
 @media(max-width:760px){.admin-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.admin-check-grid{grid-template-columns:1fr;}.admin-panel-title{align-items:flex-start;flex-direction:column;}}
 @media(max-width:420px){.admin-metric-grid{gap:8px;}.admin-metric{padding:13px;}.admin-metric>strong{font-size:20px;}}
+
+/* Responsive RIVUNE admin navigation and library pagination */
+.admin-desktop-links{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.admin-desktop-links a,.admin-quick-links a{color:var(--muted);font-size:12px;text-decoration:none;padding:9px 10px;border-radius:9px}
+.admin-desktop-links a:hover,.admin-quick-links a:hover{background:var(--raised);color:var(--text)}
+.admin-mobile-menu{display:none;position:relative}
+.admin-mobile-menu summary{list-style:none;cursor:pointer;padding:10px 13px;border:1px solid var(--line);border-radius:11px;background:var(--surface);font-size:13px;font-weight:750}
+.admin-mobile-menu summary::-webkit-details-marker{display:none}
+.admin-mobile-menu .admin-quick-links{position:absolute;right:0;top:calc(100% + 8px);z-index:60;display:grid;min-width:210px;padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--surface);box-shadow:0 18px 50px #0005}
+.admin-tool-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}
+.admin-tool-actions form{margin:0}
+.admin-pagination{display:flex;align-items:center;justify-content:center;gap:16px;padding:18px 0 4px;color:var(--muted);font-size:12px}
+.admin-pagination a{padding:10px 14px;border:1px solid var(--line);border-radius:10px;color:var(--text);text-decoration:none}
+.admin-pagination a:hover{border-color:var(--accent);color:var(--accent)}
+@media(max-width:760px){
+ .admin-wrap{width:calc(100% - 24px);margin:20px auto 50px}
+ .admin-head{align-items:center;gap:12px;margin-bottom:22px}
+ .admin-desktop-links{display:none}
+ .admin-mobile-menu{display:block}
+ .admin-tool-actions{display:grid;grid-template-columns:1fr}
+ .admin-tool-actions button{width:100%;min-height:44px}
+ .admin-track{align-items:flex-start}
+ .admin-track form button{min-height:42px;padding:10px 13px}
+ .admin-pagination{justify-content:space-between;gap:8px}
+ .admin-pagination a{padding:10px 11px}
+}
+@media(max-width:420px){.admin-mobile-menu summary{padding:9px 11px}.admin-mobile-menu summary span{display:none}.admin-track{gap:8px}.admin-track strong{overflow-wrap:anywhere}}
