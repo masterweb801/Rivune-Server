@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 require_once __DIR__ . '/lib/admin_logs.php';
+require_once __DIR__ . '/lib/admin_alerts.php';
 require_admin();
 
 function rivune_integrity_is_mp3(string $path): bool {
@@ -125,6 +126,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['rivune_integrity_scan'] = $scan;
         if (!empty($scan['tracks_done']) && !empty($scan['files_done'])) {
           rivune_admin_log($pdo, 'integrity_scan', 'success', 'Completed integrity scan: '.(int)$scan['tracks_checked'].' database records and '.(int)$scan['files_checked'].' files checked; '.array_sum($scan['counts']).' finding(s).');
+          $alertMap = [
+            'missing'=>['critical','Missing music files detected'],
+            'empty'=>['critical','Empty music files detected'],
+            'invalid'=>['critical','Invalid MP3 files detected'],
+            'orphan'=>['warning','Untracked music files detected'],
+            'duplicates'=>['warning','Duplicate music hashes detected'],
+            'metadata'=>['warning','Incomplete track metadata detected']
+          ];
+          foreach ($alertMap as $kind=>$definition) {
+            $count = (int)($scan['counts'][$kind] ?? 0);
+            if ($count > 0) rivune_alert_raise($pdo, 'integrity_'.$kind, $definition[0], $definition[1], $count.' finding(s) reported by the latest completed read-only integrity scan. Review File Integrity for details.');
+          }
         }
       } catch (Throwable $e) {
         $error = 'The scan encountered an error. Completed findings have been preserved; you can retry the next batch.';
@@ -168,7 +181,7 @@ $issueCount = is_array($scan) ? array_sum($scan['counts']) : 0;
 <main class="integrity-wrap">
 <header class="integrity-top">
   <a class="brand" href="admin.php"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>FILE INTEGRITY</small></span></a>
-  <nav style="display:flex;gap:14px;flex-wrap:wrap"><a class="text-link" href="admin-logs.php">Activity logs</a><a class="text-link" href="admin.php">← Back to Admin</a></nav>
+  <nav style="display:flex;gap:14px;flex-wrap:wrap"><a class="text-link" href="admin-alerts.php">Alerts</a><a class="text-link" href="admin-logs.php">Activity logs</a><a class="text-link" href="admin.php">← Back to Admin</a></nav>
 </header>
 <section class="integrity-card">
   <p class="eyebrow">READ-ONLY DIAGNOSTICS</p>
