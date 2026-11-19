@@ -67,3 +67,33 @@ body.player-expanded{overflow:hidden;}
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
 }
+
+/* RIVUNE admin control center */
+.admin-overview{margin:0 0 28px;}
+.admin-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0;}
+.admin-metric,.admin-storage-panel{min-width:0;padding:18px;border:1px solid var(--line);border-radius:15px;background:var(--surface);}
+.admin-metric>span,.admin-metric>small{display:block;color:var(--muted);font-size:11px;line-height:1.5;}
+.admin-metric>strong{display:block;margin:9px 0;font-size:clamp(20px,3vw,27px);letter-spacing:-.04em;overflow-wrap:anywhere;}
+.admin-metric>small{font-size:10px;}
+.admin-storage-panel{margin-top:14px;}
+.admin-panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;}
+.admin-panel-title h2{margin:0 0 5px;font-size:16px;}
+.admin-panel-title p{margin:0;}
+.admin-status{display:inline-flex;align-items:center;white-space:nowrap;padding:7px 10px;border-radius:999px;font-size:10px;font-weight:750;}
+.admin-status.good{background:#42b88318;color:var(--good);}
+.admin-status.warning{background:#e7a93b18;color:#e7b65c;}
+.admin-status.neutral{background:var(--raised);color:var(--muted);}
+.admin-storage-row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-top:1px solid var(--line);font-size:12px;}
+.admin-storage-row span{color:var(--muted);}
+.admin-storage-row strong{text-align:right;}
+.admin-check-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px;}
+.admin-check{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-top:1px solid var(--line);min-width:0;}
+.admin-check-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;margin-top:5px;background:#e7b65c;}
+.admin-check-dot.good{background:var(--good);}
+.admin-check-dot.bad{background:#e77a8a;}
+.admin-check strong,.admin-check small{display:block;overflow-wrap:anywhere;}
+.admin-check strong{font-size:11px;}
+.admin-check small{margin-top:4px;color:var(--muted);font-size:10px;line-height:1.5;}
+.admin-warning{padding:10px 12px;border-radius:9px;background:#e7a93b18;color:#e7b65c;font-size:11px;}
+@media(max-width:760px){.admin-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.admin-check-grid{grid-template-columns:1fr;}.admin-panel-title{align-items:flex-start;flex-direction:column;}}
+@media(max-width:420px){.admin-metric-grid{gap:8px;}.admin-metric{padding:13px;}.admin-metric>strong{font-size:20px;}}
