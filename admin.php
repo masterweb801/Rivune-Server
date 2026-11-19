@@ -3,6 +3,7 @@ declare(strict_types=1);
 require __DIR__.'/lib/bootstrap.php';
 require_once __DIR__.'/lib/admin_center.php';
 require_once __DIR__.'/lib/admin_logs.php';
+require_once __DIR__.'/lib/admin_alerts.php';
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 
 // Add content hashes safely to existing installations, then backfill older tracks.
@@ -122,6 +123,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if ($saved > 0 || $duplicates || $failed) {
       $uploadStatus = $failed ? (($saved > 0 || $duplicates) ? 'warning' : 'failure') : 'success';
       rivune_admin_log($pdo, 'upload', $uploadStatus, 'Upload batch: '.$saved.' saved, '.count($duplicates).' duplicate(s) skipped, '.count($failed).' failed.');
+      if ($failed) rivune_alert_raise($pdo, 'upload_failure', 'warning', 'One or more uploads failed', count($failed).' file(s) failed in the latest upload batch. Review the upload result and activity log.');
+      if ($duplicates) rivune_alert_raise($pdo, 'upload_duplicate', 'info', 'Duplicate music was skipped', count($duplicates).' identical file(s) were skipped by SHA-256 duplicate detection.');
     }
     if (($_POST['ajax_upload']??'')==='1') {
       header('Content-Type: application/json; charset=utf-8');
@@ -155,13 +158,19 @@ if ($search!=='') {
 } else {
   $tracks=$pdo->query('SELECT id,title,artist,album FROM tracks ORDER BY id DESC')->fetchAll();
 }
-?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE | Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ADMIN STUDIO</small></span></a><nav class="admin-quick-links" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><a href="admin-integrity.php" class="text-link">File integrity</a><a href="admin-logs.php" class="text-link">Activity logs</a><a href="./" class="text-link">← Public site</a></nav></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
+?><!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RIVUNE | Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"><body><main class="admin-wrap"><header class="admin-head"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>ADMIN STUDIO</small></span></a><nav class="admin-quick-links" style="display:flex;gap:14px;align-items:center;flex-wrap:wrap"><a href="admin-integrity.php" class="text-link">File integrity</a><a href="admin-logs.php" class="text-link">Activity logs</a><a href="admin-alerts.php" class="text-link">Alerts</a><a href="./" class="text-link">← Public site</a></nav></header><?php if(isset($_GET['installed'])): ?><p class="success">Installation complete. Sign in to upload your first tracks.</p><?php endif; ?><?php if($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?><?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?>
 <?php if(!is_admin()): ?><section class="panel auth-panel"><p class="eyebrow">RESTRICTED AREA</p><h1>Administrator login</h1><form method="post" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="login"><label>Username<input name="username" required autocomplete="username"></label><label>Password<input type="password" name="password" required autocomplete="current-password"></label><button class="primary">Sign in</button></form></section>
 <?php else:
 $adminStorage = rivune_admin_storage($pdo);
 $adminDiagnostics = rivune_admin_diagnostics($pdo);
+rivune_alert_check_storage($pdo, $adminStorage, $config);
+foreach ($adminDiagnostics['checks'] as $diagnostic) {
+  if (!$diagnostic['ok']) rivune_alert_raise($pdo, 'system_'.substr(sha1($diagnostic['label']),0,12), 'critical', 'System check failed: '.$diagnostic['label'], $diagnostic['detail']);
+}
+$adminOpenAlerts = rivune_alert_open_count($pdo);
 ?><section class="admin-content">
 <section class="admin-overview">
+  <div class="admin-storage-panel"><div class="admin-panel-title"><div><h2>Alerts & notifications</h2><p class="muted"><?= (int)$adminOpenAlerts ?> unresolved alert(s). Checks run during admin activity; no cron is used.</p></div><a class="text-link" href="admin-alerts.php">View alerts →</a></div></div>
   <div class="section-head"><div><p class="eyebrow">CONTROL CENTER</p><h1>System overview</h1></div><span class="muted">Live measurements · <?= h(date('M j, Y · g:i A')) ?></span></div>
   <div class="admin-metric-grid">
     <article class="admin-metric"><span>RIVUNE measured storage</span><strong><?= h(rivune_admin_format_bytes($adminStorage['measured'])) ?></strong><small>Accessible application files + database where measurable</small></article>
