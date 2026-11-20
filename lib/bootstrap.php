@@ -33,14 +33,16 @@ function csrf_check(): void {
 function is_admin(): bool { return !empty($_SESSION['admin_id']); }
 function require_admin(): void {
   if (!is_admin()) { http_response_code(401); exit('Admin login required.'); }
+  header('Cache-Control: no-store, private, max-age=0');
+  header('Pragma: no-cache');
   $now = time();
   $lastActivity = (int)($_SESSION['admin_last_activity'] ?? $now);
   $authenticatedAt = (int)($_SESSION['admin_authenticated_at'] ?? $now);
   if ($now - $lastActivity > 1800 || $now - $authenticatedAt > 43200) {
     unset($_SESSION['admin_id'], $_SESSION['admin_last_activity'], $_SESSION['admin_authenticated_at']);
     session_regenerate_id(true);
-    http_response_code(401);
-    exit('Admin session expired. Return to the admin page and sign in again.');
+    header('Location: admin.php?session=expired', true, 303);
+    exit;
   }
   $_SESSION['admin_last_activity'] = $now;
 }
