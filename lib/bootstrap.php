@@ -35,11 +35,24 @@ function require_admin(): void {
   if (!is_admin()) { http_response_code(401); exit('Admin login required.'); }
   header('Cache-Control: no-store, private, max-age=0');
   header('Pragma: no-cache');
+
+  // A config-backed version revokes every previously issued admin session
+  // without needing access to PHP's server-managed session files.
+  global $config;
+  $expectedVersion = max(1, (int)($config['admin_session_version'] ?? 1));
+  $sessionVersion = isset($_SESSION['admin_session_version']) ? (int)$_SESSION['admin_session_version'] : 0;
+  if ($sessionVersion !== $expectedVersion) {
+    unset($_SESSION['admin_id'], $_SESSION['admin_authenticated_at'], $_SESSION['admin_last_activity'], $_SESSION['admin_session_version']);
+    session_regenerate_id(true);
+    header('Location: admin.php?session=revoked', true, 303);
+    exit;
+  }
+
   $now = time();
   $lastActivity = (int)($_SESSION['admin_last_activity'] ?? $now);
   $authenticatedAt = (int)($_SESSION['admin_authenticated_at'] ?? $now);
   if ($now - $lastActivity > 1800 || $now - $authenticatedAt > 43200) {
-    unset($_SESSION['admin_id'], $_SESSION['admin_last_activity'], $_SESSION['admin_authenticated_at']);
+    unset($_SESSION['admin_id'], $_SESSION['admin_last_activity'], $_SESSION['admin_authenticated_at'], $_SESSION['admin_session_version']);
     session_regenerate_id(true);
     header('Location: admin.php?session=expired', true, 303);
     exit;
