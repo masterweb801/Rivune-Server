@@ -8,10 +8,11 @@ $adminNavItems = [
   'alerts' => ['Alerts', 'admin-alerts.php'],
   'backups' => ['Backup & Export', 'admin-backups.php'],
   'maintenance' => ['Maintenance', 'admin-maintenance.php'],
+  'security' => ['Change password', 'admin-change-password.php'],
 ];
 $adminBrandLabels = [
   'overview'=>'ADMIN STUDIO','integrity'=>'FILE INTEGRITY','logs'=>'ACTIVITY LOGS',
-  'alerts'=>'SYSTEM ALERTS','backups'=>'BACKUP & EXPORT','maintenance'=>'MAINTENANCE CONTROL'
+  'alerts'=>'SYSTEM ALERTS','backups'=>'BACKUP & EXPORT','maintenance'=>'MAINTENANCE CONTROL','security'=>'ACCOUNT SECURITY'
 ];
 ?>
 <?php if (is_admin()): ?>
