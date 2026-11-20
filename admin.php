@@ -167,6 +167,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); rivune_admin_log($pdo, 'delete', 'success', 'Deleted track record #'.(int)$id.'.'); $notice='Track deleted.'; } }
   }
 }
+if (is_admin()) require_admin();
+
 $where = $search !== '' ? " WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?" : '';
 $countTracks = $pdo->prepare('SELECT COUNT(*) FROM tracks'.$where);
 if ($search !== '') { $term='%'.$search.'%'; $countTracks->execute([$term,$term,$term]); } else { $countTracks->execute(); }
