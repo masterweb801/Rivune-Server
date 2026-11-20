@@ -26,10 +26,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     else {
       $updatedConfig = $config;
       $updatedConfig['admin_pass_hash'] = password_hash($new, PASSWORD_DEFAULT);
+      $updatedConfig['admin_session_version'] = max(1, (int)($config['admin_session_version'] ?? 1)) + 1;
       if (!rivune_admin_save_config($updatedConfig)) $error = 'Could not safely update the administrator password. Check storage folder permissions and try again.';
       else {
         $config = $updatedConfig;
         session_regenerate_id(true);
+        $_SESSION['admin_session_version'] = $updatedConfig['admin_session_version'];
         $_SESSION['admin_authenticated_at'] = time();
         $_SESSION['admin_last_activity'] = time();
         $_SESSION['csrf'] = bin2hex(random_bytes(32));
