@@ -50,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       $_SESSION['admin_id'] = 1;
       $_SESSION['admin_authenticated_at'] = time();
       $_SESSION['admin_last_activity'] = time();
+      $_SESSION['admin_session_version'] = max(1, (int)($config['admin_session_version'] ?? 1));
       $_SESSION['csrf'] = bin2hex(random_bytes(32));
       header('Location: admin.php');
       exit;
@@ -95,23 +96,55 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           if ($contentHash===false) {
             $failed[]=$name.': could not calculate file hash'; continue;
           }
-          $dupe=$pdo->prepare('SELECT id FROM tracks WHERE file_hash=? LIMIT 1');
-          $dupe->execute([$contentHash]);
-          if ($dupe->fetch()) {
-            $duplicates[]=$name; continue;
-          }
-          $title=pathinfo($name,PATHINFO_FILENAME);
-          $stored=bin2hex(random_bytes(20)).'.mp3';
-          if (!move_uploaded_file($tmp,$dir.'/'.$stored)) {
-            $failed[]=$name.': could not save file'; continue;
-          }
+          // Serialize identical hashes across concurrent requests. The lock is
+          // held until the duplicate check and database insert have completed.
+          // Fail closed if MySQL named locks are unavailable: accepting the file
+          // without a lock would reintroduce the duplicate-upload race.
+          $uploadLock = 'rivune_upload_' . substr($contentHash, 0, 50);
+          $lockAcquired = false;
           try {
-            $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name,file_hash) VALUES(?,?,?,?,?,?)');
-            $q->execute([substr($title,0,190),substr($sharedArtist,0,190),substr($sharedAlbum,0,190),basename($name),$stored,$contentHash]);
-            $saved++;
+            $lockQuery = $pdo->prepare('SELECT GET_LOCK(?, 5)');
+            $lockQuery->execute([$uploadLock]);
+            $lockAcquired = (int)$lockQuery->fetchColumn() === 1;
           } catch (Throwable $e) {
-            @unlink($dir.'/'.$stored);
-            $failed[]=$name.': database insert failed';
+            $lockAcquired = false;
+          }
+          if (!$lockAcquired) {
+            $failed[] = $name . ': could not safely verify duplicates because the database upload lock was unavailable';
+            continue;
+          }
+
+          try {
+            $dupe=$pdo->prepare('SELECT id FROM tracks WHERE file_hash=? LIMIT 1');
+            $dupe->execute([$contentHash]);
+            if ($dupe->fetch()) {
+              $duplicates[]=$name;
+              continue;
+            }
+
+            $title=pathinfo($name,PATHINFO_FILENAME);
+            $stored=bin2hex(random_bytes(20)).'.mp3';
+            if (!move_uploaded_file($tmp,$dir.'/'.$stored)) {
+              $failed[]=$name.': could not save file';
+              continue;
+            }
+            try {
+              $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name,file_hash) VALUES(?,?,?,?,?,?)');
+              $q->execute([substr($title,0,190),substr($sharedArtist,0,190),substr($sharedAlbum,0,190),basename($name),$stored,$contentHash]);
+              $saved++;
+            } catch (Throwable $e) {
+              @unlink($dir.'/'.$stored);
+              $failed[]=$name.': database insert failed';
+            }
+          } catch (Throwable $e) {
+            $failed[] = $name . ': duplicate verification failed; file was not accepted';
+          } finally {
+            try {
+              $releaseLock = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+              $releaseLock->execute([$uploadLock]);
+            } catch (Throwable $e) {
+              // The connection closing also releases any remaining named lock.
+            }
           }
         }
         if ($saved>0) { $notice=$saved.' track'.($saved===1?'':'s').' uploaded successfully.'; $uploadSound=true; }
