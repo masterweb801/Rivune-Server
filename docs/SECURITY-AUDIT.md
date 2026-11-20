@@ -61,3 +61,23 @@ Do not replace or delete `storage/config.php`, `storage/music/`, database tables
 - A restrictive Content-Security-Policy and HSTS policy were not added in this pass because they require careful validation against the site's inline scripts, styles, and hosting HTTPS behavior.
 - Automated database restore remains intentionally disabled; the existing backup page explains why.
 
+## Administrator security-question recovery
+
+- The login page's **Forgot password?** link opens `admin-forgot-password.php`.
+- The fixed questions are “My favourite color?”, “My first cat's name?”, and “LOML?”; only the answers are editable from the authenticated Account Security page.
+- Updating answers requires the current administrator password. Answers are normalized for case and whitespace, then stored as individual `password_hash()` hashes in the protected `storage/config.php`; they are never displayed back.
+- Recovery requires all three answers. A successful verification grants a five-minute, session-bound reset window; the administrator must then sign in normally with the new password.
+- Failed recovery attempts use the shared database-backed login throttle (five failures in 15 minutes trigger a 15-minute lockout where the throttle table is available). No answer values are written to logs.
+- This is a convenience recovery method, not multi-factor authentication. Security-question answers can be guessed or discovered; choose answers that are private, hard to research, and not obvious from public profiles. A strong unique admin password remains essential.
+
+### Recovery deployment files
+
+Upload/replace these files for the recovery feature:
+
+1. `admin.php` (contains the Forgot password link)
+2. `admin-change-password.php` (password and recovery-answer settings)
+3. `admin-forgot-password.php` (new recovery page)
+4. `lib/admin_recovery.php` (new helper)
+5. `lib/admin_auth.php` (shared attempt throttling; new from the earlier security pass)
+
+Also deploy `lib/bootstrap.php` if the earlier session/CSRF hardening has not yet been deployed. Do not overwrite `storage/config.php`, `storage/music/`, database contents, artwork, or unrelated assets.
