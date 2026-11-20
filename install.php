@@ -11,7 +11,17 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   else {
     try {
       $pdoInstall=new PDO('mysql:host='.$host.';dbname='.$name.';charset=utf8mb4',$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
-      $pdoInstall->exec("CREATE TABLE IF NOT EXISTS tracks (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,title VARCHAR(190) NOT NULL,artist VARCHAR(190) NOT NULL DEFAULT 'Unknown artist',album VARCHAR(190) NOT NULL DEFAULT 'Unknown album',original_name VARCHAR(255) NOT NULL,stored_name VARCHAR(80) NOT NULL UNIQUE,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX(title),INDEX(artist)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+      $pdoInstall->exec("CREATE TABLE IF NOT EXISTS tracks (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,title VARCHAR(190) NOT NULL,artist VARCHAR(190) NOT NULL DEFAULT 'Unknown artist',album VARCHAR(190) NOT NULL DEFAULT 'Unknown album',original_name VARCHAR(255) NOT NULL,stored_name VARCHAR(80) NOT NULL UNIQUE,file_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,INDEX(title),INDEX(artist),INDEX idx_tracks_file_hash (file_hash)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+      // Additive compatibility migration for an existing tracks table. Never
+      // drop or rewrite existing rows during installation.
+      $hashColumn = $pdoInstall->query("SHOW COLUMNS FROM tracks LIKE 'file_hash'")->fetch(PDO::FETCH_ASSOC);
+      if (!$hashColumn) {
+        $pdoInstall->exec("ALTER TABLE tracks ADD COLUMN file_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL");
+      }
+      $hashIndex = $pdoInstall->query("SHOW INDEX FROM tracks WHERE Key_name = 'idx_tracks_file_hash'")->fetch(PDO::FETCH_ASSOC);
+      if (!$hashIndex) {
+        $pdoInstall->exec("CREATE INDEX idx_tracks_file_hash ON tracks (file_hash)");
+      }
       $config=['db_host'=>$host,'db_name'=>$name,'db_user'=>$user,'db_pass'=>$pass,'admin_user'=>$adminUser,'admin_pass_hash'=>password_hash($adminPass,PASSWORD_DEFAULT)];
       $dir=__DIR__.'/storage'; if (!is_dir($dir)) mkdir($dir,0750,true);
       if (!is_dir($dir.'/music')) mkdir($dir.'/music',0750,true);
