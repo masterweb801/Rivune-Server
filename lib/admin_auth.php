@@ -73,7 +73,6 @@ function rivune_admin_login_is_limited(PDO $pdo, string $username, string $secre
 
 function rivune_admin_login_record_failure(PDO $pdo, string $username, string $secret): void {
   if (!rivune_admin_login_throttle_ensure($pdo)) {
-    $check = rivune_admin_login_fallback_check();
     if (empty($_SESSION['rivune_login_window_started']) || time() - (int)$_SESSION['rivune_login_window_started'] >= 900) {
       $_SESSION['rivune_login_window_started'] = time();
       $_SESSION['rivune_login_failures'] = 1;
