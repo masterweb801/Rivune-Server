@@ -44,6 +44,7 @@ function require_admin(): void {
     header('Location: admin.php?session=expired', true, 303);
     exit;
   }
+  $_SESSION['admin_authenticated_at'] = $authenticatedAt;
   $_SESSION['admin_last_activity'] = $now;
 }
 function h(string $v): string { return htmlspecialchars($v, ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8'); }
