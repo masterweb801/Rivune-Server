@@ -59,6 +59,12 @@ function rivune_make_sql(PDO $pdo,string $path): array {
   if($tableTotal<1 || $size<100 || $hash===false) throw new RuntimeException('Backup validation failed.');
   return ['size'=>$size,'hash'=>$hash,'tables'=>$tableTotal,'rows'=>$rowsTotal];
 }
+function rivune_csv_safe_cell($value): string {
+  $value = (string)$value;
+  // Prevent spreadsheet formula execution when exported metadata is opened in Excel/Sheets.
+  if ($value !== '' && preg_match('/^[\\x00-\\x20]*[=+\\-@]/', $value) === 1) return "'" . $value;
+  return $value;
+}
 function rivune_csv_export(PDO $pdo,string $path): array {
   $available=$pdo->query('SHOW COLUMNS FROM tracks')->fetchAll(PDO::FETCH_COLUMN);
   $cols=['id','title','artist','album','original_name','stored_name','created_at'];
@@ -67,7 +73,7 @@ function rivune_csv_export(PDO $pdo,string $path): array {
   $stmt=$pdo->query('SELECT '.$select.' FROM tracks ORDER BY id ASC');
   $f=@fopen($path,'wb'); if(!$f) throw new RuntimeException('Temporary CSV file unavailable.');
   fwrite($f,"\xEF\xBB\xBF"); fputcsv($f,$cols); $count=0;
-  while($row=$stmt->fetch(PDO::FETCH_ASSOC)){ fputcsv($f,$row); $count++; }
+  while($row=$stmt->fetch(PDO::FETCH_ASSOC)){ fputcsv($f,array_map('rivune_csv_safe_cell',$row)); $count++; }
   fclose($f); clearstatcache(true,$path);
   $size=(int)filesize($path); $hash=hash_file('sha256',$path);
   if($size<1 || $hash===false) throw new RuntimeException('CSV validation failed.');
