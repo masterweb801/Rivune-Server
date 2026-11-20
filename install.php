@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       if (!$hashIndex) {
         $pdoInstall->exec("CREATE INDEX idx_tracks_file_hash ON tracks (file_hash)");
       }
-      $config=['db_host'=>$host,'db_name'=>$name,'db_user'=>$user,'db_pass'=>$pass,'admin_user'=>$adminUser,'admin_pass_hash'=>password_hash($adminPass,PASSWORD_DEFAULT)];
+      $config=['db_host'=>$host,'db_name'=>$name,'db_user'=>$user,'db_pass'=>$pass,'admin_user'=>$adminUser,'admin_pass_hash'=>password_hash($adminPass,PASSWORD_DEFAULT),'admin_session_version'=>1];
       $dir=__DIR__.'/storage'; if (!is_dir($dir)) mkdir($dir,0750,true);
       if (!is_dir($dir.'/music')) mkdir($dir.'/music',0750,true);
       $php="<?php\nreturn ".var_export($config,true).";\n";
