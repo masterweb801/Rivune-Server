@@ -33,7 +33,7 @@ The installer must not be rerun on the live site merely to apply this code chang
 ### Fixed — SHA-256 duplicate-upload race
 
 **File:** `admin.php`  
-Each upload now acquires a MySQL named lock derived from the full SHA-256 digest before checking `tracks.file_hash`. The lock remains held through the file move and database insert, then is released in a `finally` block. Concurrent requests for identical audio therefore serialize: the later request sees the earlier insert and skips the duplicate.
+Each upload now acquires a MySQL named lock derived from a 200-bit prefix of the SHA-256 digest before checking `tracks.file_hash`. The lock remains held through the file move and database insert, then is released in a `finally` block. Concurrent requests for identical audio therefore serialize: the later request sees the earlier insert and skips the duplicate.
 
 The upload fails closed for that file if MySQL cannot grant the named lock or duplicate verification fails. This avoids silently falling back to the original race. Existing duplicate records are not deleted or modified, and no unique-index migration is required. This strategy assumes all application upload paths use the same lock protocol.
 
