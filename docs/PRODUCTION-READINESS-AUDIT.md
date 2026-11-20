@@ -30,19 +30,19 @@ The installer must not be rerun on the live site merely to apply this code chang
 
 ## Findings requiring follow-up
 
-### P1/P2 — SHA-256 duplicate prevention is not atomic
+### Fixed — SHA-256 duplicate-upload race
 
 **File:** `admin.php`  
-Upload checks for an existing `file_hash` and then inserts a row. Two simultaneous upload requests for identical audio can both pass the check before either inserts. The current index is non-unique, so the database does not prevent this race.
+Each upload now acquires a MySQL named lock derived from the full SHA-256 digest before checking `tracks.file_hash`. The lock remains held through the file move and database insert, then is released in a `finally` block. Concurrent requests for identical audio therefore serialize: the later request sees the earlier insert and skips the duplicate.
 
-**Recommendation:** Add a safe duplicate-concurrency strategy. A unique index is strongest, but existing duplicate hashes must be detected and handled before attempting to make the index unique. Do not automatically delete existing duplicates.
+The upload fails closed for that file if MySQL cannot grant the named lock or duplicate verification fails. This avoids silently falling back to the original race. Existing duplicate records are not deleted or modified, and no unique-index migration is required. This strategy assumes all application upload paths use the same lock protocol.
 
-### P2 — Existing administrator sessions are not revoked after password reset/change
+### Fixed — Revoke administrator sessions after password change/reset
 
-**Files:** `lib/bootstrap.php`, `admin-change-password.php`, `admin-forgot-password.php`  
-Password changes regenerate the current browser's session ID. A password reset clears the recovery browser's session. Other already-authenticated browser sessions are not invalidated.
+**Files:** `lib/bootstrap.php`, `admin-change-password.php`, `admin-forgot-password.php`, `admin.php`, `install.php`  
+Admin sessions now store a version number from protected configuration. `require_admin()` rejects sessions whose version is missing or differs from the current config version. Password changes and recovery resets increment the version; the current password-change session is updated to the new version, while all other sessions are forced to sign in again. Recovery resets continue to require a fresh normal sign-in.
 
-**Recommendation:** Add a password/session version value to protected configuration and bind each admin session to it. Increment it on password change/reset and check it in `require_admin()`. This will revoke older sessions without needing to enumerate PHP session files.
+New installations initialize the version to 1. Existing configurations without the setting use version 1; existing sessions without a session-version value are deliberately invalidated on their next protected request. No database or session-file access is needed.
 
 ### P2 — Integrity scan has scalability and coverage gaps
 
