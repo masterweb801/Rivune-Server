@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__.'/admin_auth.php';
 
 function rivune_recovery_normalize(string $answer): string {
-  $answer = trim(preg_replace('/\\s+/u', ' ', $answer) ?? trim($answer));
+  $answer = trim(preg_replace('/\s+/u', ' ', $answer) ?? trim($answer));
   return function_exists('mb_strtolower') ? mb_strtolower($answer, 'UTF-8') : strtolower($answer);
 }
 
