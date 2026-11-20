@@ -4,6 +4,9 @@ require __DIR__.'/lib/bootstrap.php';
 require_once __DIR__.'/lib/admin_center.php';
 require_once __DIR__.'/lib/admin_logs.php';
 require_once __DIR__.'/lib/admin_alerts.php';
+require_once __DIR__.'/lib/admin_auth.php';
+header('Cache-Control: no-store, private, max-age=0');
+header('Pragma: no-cache');
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 
 // Hash column is provisioned during installation; legacy hashes are not backfilled on page startup.
@@ -34,10 +37,27 @@ $page=max(1,(int)($_GET['page']??1)); $perPage=25;
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
-    if (hash_equals($config['admin_user'],trim($_POST['username']??'')) && password_verify((string)($_POST['password']??''),$config['admin_pass_hash'])) {
+    $loginUsername = isset($_POST['username']) && is_string($_POST['username']) ? trim($_POST['username']) : '';
+    $loginPassword = isset($_POST['password']) && is_string($_POST['password']) ? $_POST['password'] : '';
+    $passwordHash = (string)($config['admin_pass_hash'] ?? '');
+    $throttle = rivune_admin_login_is_limited($pdo, $loginUsername, $passwordHash);
+    if ($throttle['limited']) {
+      $error = 'Too many sign-in attempts. Please wait before trying again.';
+    } elseif (hash_equals((string)$config['admin_user'], $loginUsername) && password_verify($loginPassword, $passwordHash)) {
+      rivune_admin_login_clear($pdo, $loginUsername, $passwordHash);
       rivune_admin_log($pdo, 'login', 'success', 'Administrator signed in.');
-      session_regenerate_id(true); $_SESSION['admin_id']=1; $_SESSION['csrf']=bin2hex(random_bytes(32)); header('Location: admin.php'); exit;
-    } else { rivune_admin_log($pdo, 'login', 'failure', 'An administrator sign-in attempt failed.'); $error='Incorrect username or password.'; }
+      session_regenerate_id(true);
+      $_SESSION['admin_id'] = 1;
+      $_SESSION['admin_authenticated_at'] = time();
+      $_SESSION['admin_last_activity'] = time();
+      $_SESSION['csrf'] = bin2hex(random_bytes(32));
+      header('Location: admin.php');
+      exit;
+    } else {
+      rivune_admin_login_record_failure($pdo, $loginUsername, $passwordHash);
+      rivune_admin_log($pdo, 'login', 'failure', 'An administrator sign-in attempt failed.');
+      $error = 'Incorrect username or password.';
+    }
   } elseif ($action==='logout') { rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
   elseif ($action==='upload') {
     require_admin();
