@@ -42,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       else {
         $updatedConfig = $config;
         $updatedConfig['admin_pass_hash'] = password_hash($new, PASSWORD_DEFAULT);
+        $updatedConfig['admin_session_version'] = max(1, (int)($config['admin_session_version'] ?? 1)) + 1;
         if (!rivune_admin_save_config($updatedConfig)) {
           $error = 'Could not safely update the administrator password. Please contact your hosting administrator.';
         } else {
