@@ -8,7 +8,8 @@
 - The admin artwork maintenance page can optimize existing artwork in batches of 10 tracks, without replacing its image content with MP3 metadata.
 - The admin artwork upload remains optional and acts as a manual override. A newly uploaded MP3 with an embedded cover replaces the existing cover for that track; an MP3 without a cover does not erase an existing manual cover.
 
-- Admin-only artwork management at `admin-artwork.php?id=TRACK_ID`.
+- Admin navigation groups song tools under **Songs**: `admin-upload.php` for bulk uploads, `admin-songs.php` for search/delete and per-track artwork links, and `admin-extract-artwork.php` for batch extraction/optimization.
+- Admin-only per-track artwork management at `admin-artwork.php?id=TRACK_ID`.
 - Public artwork delivery through `artwork.php?id=TRACK_ID`; the raw artwork directory remains under protected `storage/`.
 - JPEG, PNG, and WebP uploads up to 5 MB, with image signature/MIME and dimension checks.
 - One artwork image per track. Replacing an image safely swaps the file; removing it returns the player to its built-in music-note fallback.
@@ -29,6 +30,8 @@ Upload/replace these files from the `dev` branch:
 - `api.php`
 - `index.php`
 - `admin.php`
+- `admin-upload.php`
+- `admin-songs.php`
 - `assets/js/app.js`
 - `assets/css/app.css` (if not already deployed with the previous admin layout fix)
 - `assets/css/app.css`
