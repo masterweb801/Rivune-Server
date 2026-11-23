@@ -7,6 +7,9 @@
   const fmt=n=>Number.isFinite(n)&&n>0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
   function setArtwork(element,url,alt){
     if(!element)return;
+    const normalizedUrl=url?String(url):'';
+    if(element.dataset.artworkUrl===normalizedUrl)return;
+    element.dataset.artworkUrl=normalizedUrl;
     element.replaceChildren();
     if(url){
       const image=document.createElement('img');image.src=String(url);image.alt=alt||'Track artwork';image.loading='lazy';
