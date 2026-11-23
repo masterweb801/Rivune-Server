@@ -41,6 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $scan = [
       'started_at'=>date('Y-m-d H:i:s'),
       'track_last_id'=>0, 'tracks_done'=>false, 'tracks_checked'=>0,
+      'hash_last_id'=>0, 'hashes_done'=>false, 'hashes_checked'=>0, 'hashes_skipped'=>0,
       'file_offset'=>0, 'files_done'=>false, 'files_checked'=>0,
       'counts'=>[], 'findings'=>[], 'duplicate_groups'=>0
     ];
@@ -69,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)$track['id'];
             $scan['track_last_id'] = $id;
             $scan['tracks_checked']++;
-            $stored = basename((string)$track['stored_name']);
-            $path = __DIR__ . '/storage/music/' . $stored;
-            if ($stored === '' || !is_file($path)) {
+            $stored = (string)$track['stored_name'];
+            $path = rivune_music_storage_path($stored);
+            if ($path === null || !is_file($path)) {
               rivune_integrity_finding($scan, 'missing', 'Track #' . $id . ' (' . (string)$track['title'] . '): stored MP3 file is missing.');
               continue;
             }
@@ -87,6 +88,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
           }
           if (count($rows) < 25) $scan['tracks_done'] = true;
+        }
+
+        // Hash at most two MP3 files per request (uploads are capped at 25 MB)
+        // so optional integrity verification remains bounded on shared hosting.
+        if (empty($scan['hashes_done'])) {
+          $hashQuery = $pdo->prepare('SELECT id,title,stored_name,file_hash FROM tracks WHERE id > ? ORDER BY id ASC LIMIT 2');
+          $hashQuery->execute([(int)($scan['hash_last_id'] ?? 0)]);
+          $hashRows = $hashQuery->fetchAll();
+          foreach ($hashRows as $hashTrack) {
+            $scan['hash_last_id'] = (int)$hashTrack['id'];
+            $recordedHash = strtolower(trim((string)($hashTrack['file_hash'] ?? '')));
+            if ($recordedHash === '') {
+              $scan['hashes_skipped'] = (int)($scan['hashes_skipped'] ?? 0) + 1;
+              continue;
+            }
+            if (!preg_match('/^[a-f0-9]{64}$/D', $recordedHash)) {
+              rivune_integrity_finding($scan, 'hash_invalid', 'Track #' . (int)$hashTrack['id'] . ': stored SHA-256 value is malformed.');
+              continue;
+            }
+            $hashPath = rivune_music_storage_path((string)$hashTrack['stored_name']);
+            if ($hashPath === null || !is_file($hashPath) || !is_readable($hashPath)) continue;
+            $actualHash = @hash_file('sha256', $hashPath);
+            if ($actualHash === false) {
+              rivune_integrity_finding($scan, 'hash_unreadable', 'Track #' . (int)$hashTrack['id'] . ': SHA-256 verification could not read the stored file.');
+              continue;
+            }
+            $scan['hashes_checked'] = (int)($scan['hashes_checked'] ?? 0) + 1;
+            if (!hash_equals($recordedHash, strtolower($actualHash))) {
+              rivune_integrity_finding($scan, 'hash_mismatch', 'Track #' . (int)$hashTrack['id'] . ' (' . (string)$hashTrack['title'] . '): stored MP3 content does not match its recorded SHA-256 hash.');
+            }
+          }
+          if (count($hashRows) < 2) $scan['hashes_done'] = true;
         }
 
         if (!$scan['files_done']) {
@@ -124,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           }
         }
         $_SESSION['rivune_integrity_scan'] = $scan;
-        if (!empty($scan['tracks_done']) && !empty($scan['files_done'])) {
+        if (!empty($scan['tracks_done']) && !empty($scan['files_done']) && !empty($scan['hashes_done'])) {
           rivune_admin_log($pdo, 'integrity_scan', 'success', 'Completed integrity scan: '.(int)$scan['tracks_checked'].' database records and '.(int)$scan['files_checked'].' files checked; '.array_sum($scan['counts']).' finding(s).');
           $alertMap = [
             'missing'=>['critical','Missing music files detected'],
@@ -132,7 +165,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'invalid'=>['critical','Invalid MP3 files detected'],
             'orphan'=>['warning','Untracked music files detected'],
             'duplicates'=>['warning','Duplicate music hashes detected'],
-            'metadata'=>['warning','Incomplete track metadata detected']
+            'metadata'=>['warning','Incomplete track metadata detected'],
+            'hash_mismatch'=>['critical','Music file hash mismatch detected'],
+            'hash_invalid'=>['warning','Invalid stored SHA-256 values detected'],
+            'hash_unreadable'=>['warning','Music file hash could not be verified']
           ];
           foreach ($alertMap as $kind=>$definition) {
             $count = (int)($scan['counts'][$kind] ?? 0);
@@ -151,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $scan = $_SESSION['rivune_integrity_scan'] ?? null;
-$complete = is_array($scan) && !empty($scan['tracks_done']) && !empty($scan['files_done']);
+$complete = is_array($scan) && !empty($scan['tracks_done']) && !empty($scan['files_done']) && !empty($scan['hashes_done']);
 $checked = is_array($scan) ? (int)$scan['tracks_checked'] + (int)$scan['files_checked'] : 0;
 $issueCount = is_array($scan) ? array_sum($scan['counts']) : 0;
 ?><!doctype html>
@@ -196,13 +232,14 @@ $issueCount = is_array($scan) ? array_sum($scan['counts']) : 0;
     <div class="integrity-stats">
       <div class="integrity-stat"><span>Records checked</span><strong><?= (int)$scan['tracks_checked'] ?></strong></div>
       <div class="integrity-stat"><span>Files checked</span><strong><?= (int)$scan['files_checked'] ?></strong></div>
+      <div class="integrity-stat"><span>SHA-256 verified</span><strong><?= (int)($scan['hashes_checked'] ?? 0) ?></strong></div>
       <div class="integrity-stat"><span>Issue count</span><strong><?= (int)$issueCount ?></strong></div>
       <div class="integrity-stat"><span>Duplicate groups</span><strong><?= (int)$scan['duplicate_groups'] ?></strong></div>
     </div>
     <p class="muted">Started <?= h((string)$scan['started_at']) ?> · <?= $complete ? 'Scan complete' : 'Scan in progress' ?></p>
     <?php if (!$complete): ?>
       <form method="post" class="integrity-actions"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="step"><button class="primary" type="submit">Scan next batch</button></form>
-      <p class="muted">Each batch checks up to 25 database records and 40 directory entries. Continue until the scan is complete.</p>
+      <p class="muted">Each batch checks up to 25 database records, 40 directory entries, and two full-file SHA-256 hashes. Older tracks without a recorded hash are skipped rather than treated as corrupted.</p>
     <?php endif; ?>
     <?php if ($scan['counts']): ?>
       <div class="integrity-stats">
