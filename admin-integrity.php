@@ -157,10 +157,10 @@ $issueCount = is_array($scan) ? array_sum($scan['counts']) : 0;
 ?><!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>RIVUNE | File Integrity</title>
 <link rel="icon" type="image/png" href="public/assets/rivune-logo.png">
-<link rel="stylesheet" href="assets/css/app.css">
+<link rel="stylesheet" href="assets/css/app.css?v=responsive-controls-1">
 <style>
 .integrity-wrap{width:min(900px,calc(100% - 32px));margin:40px auto 70px}
 .integrity-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}
