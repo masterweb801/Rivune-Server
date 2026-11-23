@@ -5,7 +5,9 @@ if (!isset($pdo)) { header('Location: install.php'); exit; }
 require_admin();
 $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_admin_notice']);
 ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Upload songs | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=admin-split-3">
+<link rel="stylesheet" href="assets/css/app.css?v=app-core-4">
+<link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
+<link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1"></head><body><main class="admin-wrap"><?php $adminActivePage='song_upload'; require __DIR__.'/lib/admin_navigation.php'; ?>
 <section class="panel"><p class="eyebrow">SONGS · UPLOAD</p><h1>Upload songs</h1><p class="muted">Upload multiple MP3 files in one batch. Each file can be up to 25 MB. Titles are taken from filenames; artist and album values apply to every selected track. Identical audio is skipped automatically using SHA-256.</p>
 <?php if($notice): ?><p class="success"><?= h($notice) ?></p><?php endif; ?><div id="upload-message" aria-live="polite"></div>
