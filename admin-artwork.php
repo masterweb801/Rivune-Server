@@ -62,7 +62,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 }
 $currentArtwork=rivune_artwork_path((int)$id);
 ?><!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Track artwork | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css?v=responsive-controls-1"></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Track artwork | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
+<link rel="stylesheet" href="assets/css/app.css?v=modular-theme-1"></head>
 <body><main class="admin-wrap"><?php $adminActivePage='song_manage'; require __DIR__.'/lib/admin_navigation.php'; ?>
 <section class="panel"><p class="eyebrow">MUSIC LIBRARY</p><h1>Track artwork</h1><p class="muted"><?= h((string)$track['title']) ?> · <?= h((string)$track['artist']) ?></p><p class="muted">RIVUNE automatically extracts supported embedded album art from MP3 uploads. Uploading an image here sets a manual cover override.</p>
 <?php if ($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
