@@ -10,7 +10,9 @@ $count=$pdo->prepare('SELECT COUNT(*) FROM tracks'.$where);if($search!==''){$ter
 $total=(int)$count->fetchColumn();$pages=max(1,(int)ceil($total/$perPage));$page=min($page,$pages);
 $stmt=$pdo->prepare('SELECT id,title,artist,album FROM tracks'.$where.' ORDER BY id DESC LIMIT '.$perPage.' OFFSET '.(($page-1)*$perPage));if($search!=='')$stmt->execute([$term,$term,$term]);else$stmt->execute();$tracks=$stmt->fetchAll();
 ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Manage songs | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=admin-split-3">
+<link rel="stylesheet" href="assets/css/app.css?v=app-core-4">
+<link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
+<link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1"></head><body><main class="admin-wrap"><?php $adminActivePage='song_manage';require __DIR__.'/lib/admin_navigation.php';?>
 <section class="panel"><p class="eyebrow">SONGS · MANAGEMENT</p><div class="section-head"><h1>Manage songs</h1><span class="muted"><?= $total ?><?= $search!==''?' matching':'' ?> tracks · Page <?= $page ?> / <?= $pages ?></span></div>
 <?php if($notice):?><p class="success"><?=h($notice)?></p><?php endif;?>
