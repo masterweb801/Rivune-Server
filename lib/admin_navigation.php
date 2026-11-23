@@ -6,6 +6,7 @@ $adminNavItems = [
   'song_upload' => ['Upload songs', 'admin-upload.php'],
   'song_manage' => ['Manage songs', 'admin-songs.php'],
   'artwork' => ['Artwork maintenance', 'admin-extract-artwork.php'],
+  'analytics' => ['Song analytics', 'admin-analytics.php'],
   'integrity' => ['File integrity', 'admin-integrity.php'],
   'logs' => ['Activity logs', 'admin-logs.php'],
   'alerts' => ['Alerts', 'admin-alerts.php'],
@@ -14,7 +15,7 @@ $adminNavItems = [
   'security' => ['Change password', 'admin-change-password.php'],
 ];
 $adminBrandLabels = [
-  'overview'=>'ADMIN STUDIO','song_upload'=>'SONG UPLOAD','song_manage'=>'SONG MANAGEMENT','artwork'=>'ARTWORK MAINTENANCE','integrity'=>'FILE INTEGRITY','logs'=>'ACTIVITY LOGS',
+  'overview'=>'ADMIN STUDIO','song_upload'=>'SONG UPLOAD','song_manage'=>'SONG MANAGEMENT','artwork'=>'ARTWORK MAINTENANCE','analytics'=>'SONG ANALYTICS','integrity'=>'FILE INTEGRITY','logs'=>'ACTIVITY LOGS',
   'alerts'=>'SYSTEM ALERTS','backups'=>'BACKUP & EXPORT','maintenance'=>'MAINTENANCE CONTROL','security'=>'ACCOUNT SECURITY'
 ];
 ?>
@@ -25,7 +26,7 @@ $adminBrandLabels = [
     <summary aria-label="Open admin navigation"><span class="rivune-menu-icon">☰</span><span>Menu</span></summary>
     <nav class="rivune-admin-menu" aria-label="Admin navigation">
       <span class="rivune-nav-group-label">Songs</span>
-      <?php foreach (['song_upload','song_manage','artwork'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
+      <?php foreach (['song_upload','song_manage','artwork','analytics'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
       <span class="rivune-nav-group-label">System</span>
       <?php foreach (['overview','integrity','logs','alerts','backups','maintenance','security'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
       <a href="./">← Public site</a>
