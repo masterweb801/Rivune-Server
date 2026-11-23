@@ -12,12 +12,15 @@ try {
   $offset = ($page - 1) * $limit;
   $search = trim((string)($_GET['q'] ?? ''));
   $sort = (string)($_GET['sort'] ?? 'popular');
-  $order = $sort === 'newest' ? 't.id DESC' : 'COALESCE(tp.play_count,0) DESC, t.title COLLATE utf8mb4_unicode_ci, t.id DESC';
+  $hasPlayStats = (bool)$pdo->query("SHOW TABLES LIKE 'track_plays'")->fetchColumn();
+  $playCountExpr = $hasPlayStats ? 'COALESCE(tp.play_count,0)' : '0';
+  $playJoin = $hasPlayStats ? ' LEFT JOIN track_plays tp ON tp.track_id=t.id' : '';
+  $order = $sort === 'newest' ? 't.id DESC' : $playCountExpr.' DESC, t.title COLLATE utf8mb4_unicode_ci, t.id DESC';
   $where = $search !== '' ? " WHERE t.title LIKE ? OR t.artist LIKE ? OR t.album LIKE ?" : '';
   $countStmt = $pdo->prepare('SELECT COUNT(*) FROM tracks t'.$where);
   if ($search !== '') { $term = '%'.$search.'%'; $countStmt->execute([$term,$term,$term]); } else { $countStmt->execute(); }
   $total = (int)$countStmt->fetchColumn();
-  $sql = 'SELECT t.id,t.title,t.artist,t.album,t.original_name,t.created_at,COALESCE(tp.play_count,0) AS play_count FROM tracks t LEFT JOIN track_plays tp ON tp.track_id=t.id'.$where.' ORDER BY '.$order;
+  $sql = 'SELECT t.id,t.title,t.artist,t.album,t.original_name,t.created_at,'.$playCountExpr.' AS play_count FROM tracks t'.$playJoin.$where.' ORDER BY '.$order;
   if ($paginated) $sql .= ' LIMIT '.$limit.' OFFSET '.$offset;
   $stmt = $pdo->prepare($sql);
   if ($search !== '') $stmt->execute([$term,$term,$term]); else $stmt->execute();
