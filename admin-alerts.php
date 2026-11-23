@@ -34,7 +34,8 @@ try {
 } catch (Throwable $e) { $error = 'Alerts are unavailable. The database user may not have permission to create or read the admin_alerts table.'; }
 ?><!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>RIVUNE | Alerts</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=app-split-2">
+<link rel="stylesheet" href="assets/css/app.css?v=admin-split-3">
+<link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1">
 <style>
 .alerts-wrap{width:min(1000px,calc(100% - 32px));margin:40px auto 70px}.alerts-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}.alerts-card{padding:22px;margin:18px 0;border:1px solid var(--line);border-radius:18px;background:var(--surface)}.alerts-filters{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.alerts-filters a{padding:8px 12px;border:1px solid var(--line);border-radius:9px;color:inherit;text-decoration:none}.alert-row{display:flex;justify-content:space-between;gap:18px;padding:16px 0;border-top:1px solid var(--line)}.alert-row h3{margin:0 0 6px;font-size:15px}.alert-row p{margin:0;color:var(--muted);font-size:13px;line-height:1.5}.alert-meta{font-size:11px;color:var(--muted);margin-top:8px}.alert-severity{font-size:10px;text-transform:uppercase;letter-spacing:.08em}.alert-critical{color:#e06b6b}.alert-warning{color:#d6a343}.alert-info{color:var(--muted)}.alert-row form{flex-shrink:0;align-self:center}@media(max-width:600px){.alerts-top{align-items:flex-start;flex-direction:column}.alerts-card{padding:16px}.alert-row{flex-direction:column}.alert-row form{align-self:flex-start}}
 </style></head><body><main class="alerts-wrap">
