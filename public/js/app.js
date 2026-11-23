@@ -22,6 +22,58 @@ themeToggle.addEventListener('click', () => {
   document.querySelector('meta[name="theme-color"]').content = root.dataset.theme === 'light' ? '#F7F5FC' : '#11111D';
   syncThemeButton();
 });
+// Keep the public navigation and library search out of the way while browsing.
+// Scrolling upward reveals both again; focusing search temporarily locks them open.
+let previousScrollY = window.scrollY;
+let scrollIntent = 0;
+let scrollFrame = false;
+const scrollDirectionThreshold = 9;
+function updateScrollNavigation() {
+  const currentY = Math.max(0, window.scrollY);
+  const delta = currentY - previousScrollY;
+  previousScrollY = currentY;
+
+  if (document.querySelector('.player')?.classList.contains('expanded') ||
+      document.activeElement === searchEl) {
+    document.body.classList.remove('nav-hidden');
+    scrollIntent = 0;
+    scrollFrame = false;
+    return;
+  }
+
+  if (currentY <= 24) {
+    document.body.classList.remove('nav-hidden');
+    scrollIntent = 0;
+    scrollFrame = false;
+    return;
+  }
+
+  if (Math.abs(delta) >= 1) {
+    const direction = Math.sign(delta);
+    if (scrollIntent && Math.sign(scrollIntent) !== direction) scrollIntent = 0;
+    scrollIntent += delta;
+
+    if (scrollIntent > scrollDirectionThreshold) {
+      document.body.classList.add('nav-hidden');
+      scrollIntent = 0;
+    } else if (scrollIntent < -scrollDirectionThreshold) {
+      document.body.classList.remove('nav-hidden');
+      scrollIntent = 0;
+    }
+  }
+  scrollFrame = false;
+}
+window.addEventListener('scroll', () => {
+  if (scrollFrame) return;
+  scrollFrame = true;
+  window.requestAnimationFrame(updateScrollNavigation);
+}, { passive: true });
+searchEl.addEventListener('focus', () => document.body.classList.remove('nav-hidden'));
+searchEl.addEventListener('blur', () => {
+  previousScrollY = window.scrollY;
+  scrollIntent = 0;
+});
+
 document.addEventListener('keydown', event => {
   if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
     event.preventDefault();
