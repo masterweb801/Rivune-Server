@@ -4,8 +4,8 @@
 - Search is debounced and server-paginated. Artwork retains lazy loading.
 - Shuffle and Random fetch the full library on demand to remain global.
 - Android receives the legacy unpaginated API response when no pagination parameters are supplied.
-- Explicit play-start events increment a separate track_plays counter. Range requests, seeks, and buffering do not count.
-- A 30-second per-session/per-track cooldown reduces accidental duplicate counting. Native state transitions are observed for Android notification-driven track changes.
+- A track counts as played only after at least 30 seconds of plausible forward listening time in the active playback session. Starting a track, shuffle selection, random selection, buffering, and seeking do not count on their own.
+- Large position jumps are treated as seeks/stalls and ignored. Each qualifying playback instance has a unique ID, preventing duplicate event submissions. Native playback position updates are observed for Android notification-driven playback.
 - Admin → Songs → Song analytics initializes the additive track_plays table on existing installs and displays totals, top and least-played tracks.
 - New installs create the table during installation. Existing sites must visit admin-analytics.php once after deployment. Do not rerun install.php.
 - Track deletion cascades only its analytics row; MP3 and artwork storage is not modified by analytics.
