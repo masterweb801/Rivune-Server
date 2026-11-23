@@ -23,7 +23,7 @@ function rivune_extract_mp3_artwork(string $path): ?array {
   if ($body===false || strlen($body)!==$tagSize) return null;
   if ((ord($header[5])&0x80)!==0) $body=str_replace("\xFF\x00","\xFF",$body);
 
-  $offset=0; $bodyLength=strlen($body);
+  $offset=$bodyOffset; $bodyLength=strlen($body);
   while ($offset+($major===2?6:10)<=$bodyLength) {
     if ($major===2) {
       $frameId=substr($body,$offset,3);
@@ -80,9 +80,11 @@ function rivune_extract_mp3_artwork(string $path): ?array {
     if (!$info || !isset($allowed[$mime]) || $info['mime']!==$mime) continue;
     $width=(int)$info[0]; $height=(int)$info[1];
     if ($width<1 || $height<1 || $width>6000 || $height>6000 || $width*$height>24000000) continue;
-    return ['extension'=>$allowed[$mime],'data'=>$image];
+    $validArtwork=['extension'=>$allowed[$mime],'data'=>$image];
+    if ($pictureType===3) return $validArtwork; // Prefer the ID3 front-cover frame.
+    if (!isset($fallbackArtwork)) $fallbackArtwork=$validArtwork;
   }
-  return null;
+  return $fallbackArtwork??null;
 }
 
 /** Store a validated extracted cover without risking the uploaded MP3. */
