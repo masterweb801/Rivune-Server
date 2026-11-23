@@ -129,7 +129,7 @@ This is a source-level route and authorization review. The repository integratio
 - Invalid stored names are not streamed or deleted. The administrator delete action leaves the affected record and files untouched for investigation.
 
 ### Public play-event abuse controls
-- `play-event.php` now limits each network address to 30 accepted event attempts per rolling 10-minute window using a database-backed table.
+- `play-event.php` now limits each network address to 120 accepted event attempts per rolling 10-minute window (a deliberately higher shared-network allowance) using a database-backed table.
 - Only an HMAC digest of the address is stored; the raw address is not persisted.
 - Session deduplication keys now include both track ID and playback ID.
 - Submitted listening duration is bounded to 30–86,400 seconds. These checks limit abuse but cannot prove that the client actually listened; analytics remain estimates, not verified listening measurements.
@@ -163,7 +163,7 @@ Production files changed in this follow-up:
 9. `lib/admin_center.php`
 10. `public/.htaccess`
 
-No MP3, artwork, `storage/config.php`, or existing database records are changed. The `play_event_limits` table is created automatically on the first play-event request; no manual migration is required.
+No MP3, artwork, `storage/config.php`, or existing database records are changed. The `play_event_limits` table is created automatically on the first play-event request; stale identity rows are pruned gradually after 30 days. No manual migration is required.
 
 ### Verification limits
 
