@@ -71,7 +71,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Account Security | RIVUNE Admin</title>
 <link rel="icon" type="image/png" href="public/assets/rivune-logo.png">
 <link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=admin-split-3">
+<link rel="stylesheet" href="assets/css/app.css?v=app-core-4">
+<link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
+<link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1">
 <body>
 <main class="admin-wrap">
