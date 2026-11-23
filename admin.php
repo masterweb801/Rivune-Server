@@ -5,6 +5,7 @@ require_once __DIR__.'/lib/admin_center.php';
 require_once __DIR__.'/lib/admin_logs.php';
 require_once __DIR__.'/lib/admin_alerts.php';
 require_once __DIR__.'/lib/admin_auth.php';
+require_once __DIR__.'/lib/mp3_artwork.php';
 header('Cache-Control: no-store, private, max-age=0');
 header('Pragma: no-cache');
 if (!isset($pdo)) { header('Location: install.php'); exit; }
@@ -12,112 +13,6 @@ if (!isset($pdo)) { header('Location: install.php'); exit; }
 // Hash column is provisioned during installation; legacy hashes are not backfilled on page startup.
 
 // Detect real MPEG audio frames instead of relying on the hosting server's MIME label.
-/**
- * Read an embedded ID3v2 APIC/PIC cover from an MP3 upload.
- * Returns a validated image payload; malformed or unsupported tags are ignored.
- */
-function rivune_extract_mp3_artwork(string $path): ?array {
-  $fp=@fopen($path,'rb');
-  if (!$fp) return null;
-  $header=fread($fp,10);
-  if ($header===false || strlen($header)!==10 || substr($header,0,3)!=='ID3') { fclose($fp); return null; }
-  $major=ord($header[3]);
-  if (!in_array($major,[2,3,4],true)) { fclose($fp); return null; }
-  $tagSize=0;
-  for ($i=6;$i<10;$i++) {
-    $byte=ord($header[$i]);
-    if (($byte&0x80)!==0) { fclose($fp); return null; }
-    $tagSize=($tagSize<<7)|$byte;
-  }
-  if ($tagSize<1 || $tagSize>8*1024*1024) { fclose($fp); return null; }
-  $body=fread($fp,$tagSize);
-  fclose($fp);
-  if ($body===false || strlen($body)!==$tagSize) return null;
-  if ((ord($header[5])&0x80)!==0) $body=str_replace("\xFF\x00","\xFF",$body);
-
-  $offset=0; $bodyLength=strlen($body);
-  while ($offset+($major===2?6:10)<=$bodyLength) {
-    if ($major===2) {
-      $frameId=substr($body,$offset,3);
-      if ($frameId==="\0\0\0") break;
-      $size=ord($body[$offset+3])*65536+ord($body[$offset+4])*256+ord($body[$offset+5]);
-      $frameHeader=6;
-    } else {
-      $frameId=substr($body,$offset,4);
-      if ($frameId==="\0\0\0\0") break;
-      $size=0;
-      if ($major===4) {
-        for ($j=0;$j<4;$j++) {
-          $b=ord($body[$offset+4+$j]);
-          if (($b&0x80)!==0) { $size=0; break; }
-          $size=($size<<7)|$b;
-        }
-      } else {
-        $size=unpack('N',substr($body,$offset+4,4))[1];
-      }
-      $frameHeader=10;
-    }
-    if ($size<1 || $size>$bodyLength-$offset-$frameHeader) break;
-    $payload=substr($body,$offset+$frameHeader,$size);
-    $offset+=$frameHeader+$size;
-    if (($major===2 && $frameId!=='PIC') || ($major!==2 && $frameId!=='APIC')) continue;
-    if (strlen($payload)<5) continue;
-
-    $encoding=ord($payload[0]);
-    if ($major===2) {
-      $format=strtoupper(substr($payload,1,3));
-      $mime=$format==='JPG'?'image/jpeg':($format==='PNG'?'image/png':'');
-      $cursor=4;
-    } else {
-      $mimeEnd=strpos($payload,"\0",1);
-      if ($mimeEnd===false) continue;
-      $mime=strtolower(substr($payload,1,$mimeEnd-1));
-      $cursor=$mimeEnd+1;
-    }
-    if ($cursor>=strlen($payload)) continue;
-    $cursor++; // picture type
-    if ($encoding===1 || $encoding===2) {
-      $terminator=strpos($payload,"\0\0",$cursor);
-      if ($terminator===false) continue;
-      $cursor=$terminator+2;
-    } else {
-      $terminator=strpos($payload,"\0",$cursor);
-      if ($terminator===false) continue;
-      $cursor=$terminator+1;
-    }
-    $image=substr($payload,$cursor);
-    if ($image==='' || strlen($image)>5*1024*1024) continue;
-    $info=@getimagesizefromstring($image);
-    $allowed=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
-    if (!$info || !isset($allowed[$mime]) || $info['mime']!==$mime) continue;
-    $width=(int)$info[0]; $height=(int)$info[1];
-    if ($width<1 || $height<1 || $width>6000 || $height>6000 || $width*$height>24000000) continue;
-    return ['extension'=>$allowed[$mime],'data'=>$image];
-  }
-  return null;
-}
-
-/** Store a validated extracted cover without risking the uploaded MP3. */
-function rivune_save_embedded_artwork(int $trackId, array $artwork): bool {
-  if ($trackId<1 || !isset($artwork['extension'],$artwork['data'])) return false;
-  $extensions=['jpg','png','webp'];
-  $extension=(string)$artwork['extension'];
-  $data=$artwork['data'];
-  if (!in_array($extension,$extensions,true) || !is_string($data) || $data==='' || strlen($data)>5*1024*1024) return false;
-  $directory=__DIR__.'/storage/artwork';
-  if (!is_dir($directory) && !@mkdir($directory,0750,true) && !is_dir($directory)) return false;
-  $temporary=$directory.'/'.bin2hex(random_bytes(16)).'.tmp';
-  if (@file_put_contents($temporary,$data,LOCK_EX)!==strlen($data)) { @unlink($temporary); return false; }
-  $destination=$directory.'/'.$trackId.'.'.$extension;
-  if (!@rename($temporary,$destination)) { @unlink($temporary); return false; }
-  foreach ($extensions as $other) {
-    if ($other===$extension) continue;
-    $old=$directory.'/'.$trackId.'.'.$other;
-    if (is_file($old)) @unlink($old);
-  }
-  return true;
-}
-
 function rivune_is_mp3(string $path): bool {
   $fp = @fopen($path, 'rb');
   if (!$fp) return false;
@@ -340,7 +235,7 @@ $adminDiagnostics = $_SESSION['rivune_health_cache'] ?? null;
 <?php else: ?><div class="admin-storage-panel"><p class="muted">No saved storage snapshot. Use Refresh storage when needed.</p></div><?php endif; ?><p class="muted" style="font-size:12px">Usage is an estimate based on files and database size RIVUNE can measure. InfinityFree does not expose live account quota to PHP; 4.5 GB is your supplied reference, not a live hosting measurement. Other account files may not be included.</p>
 <?php if ($adminDiagnostics): ?><div class="admin-storage-panel"><h2>System health · Cached</h2><p class="muted"><?= (int)$adminDiagnostics['passed'] ?> / <?= (int)$adminDiagnostics['total'] ?> checks passed</p><div class="admin-check-grid"><?php foreach ($adminDiagnostics['checks'] as $check): ?><div class="admin-check"><strong><?= h($check['label']) ?></strong><small><?= h($check['detail']) ?></small></div><?php endforeach; ?></div></div><?php else: ?><div class="admin-storage-panel"><p class="muted">No saved diagnostics. Run checks when needed.</p></div><?php endif; ?>
 </section>
-<div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form" data-ajax-upload><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><input type="hidden" name="ajax_upload" value="1"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel" id="song-deletion"><div class="section-head"><h2>Song Deletion Centre</h2><span class="muted"><?= (int)$totalTracks ?><?= $search!==''?' matching':'' ?> tracks · Page <?= (int)$page ?> / <?= (int)$totalPages ?></span></div><form method="get" action="admin.php#song-deletion" class="form" style="margin:0 0 18px"><label>Search songs<input type="search" name="q" value="<?= h($search) ?>" placeholder="Search title, artist or album" autocomplete="off"></label><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" type="submit">Search</button><?php if($search!==''): ?><a class="text-link" href="admin.php#song-deletion">Clear search</a><?php endif; ?></div></form><?php if(!$tracks): ?><p class="muted"><?= $search!==''?'No matching songs found.':'No music uploaded yet.' ?></p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><div class="admin-track-actions"><a class="text-link" href="admin-artwork.php?id=<?= (int)$t['id'] ?>">Artwork</a><form method="post" action="admin.php?<?= $search!==''?'q='.rawurlencode($search).'&amp;':'' ?>page=<?= (int)$page ?>#song-deletion" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div></div><?php endforeach; ?></div><?php endif; ?><?php if($totalPages>1): ?><nav class="admin-pagination" aria-label="Song list pages"><?php if($page>1): ?><a href="admin.php?<?= $search!==''?'q='.rawurlencode($search).'&amp;':'' ?>page=<?= $page-1 ?>#song-deletion">← Previous</a><?php endif; ?><span>Page <?= $page ?> of <?= $totalPages ?></span><?php if($page<$totalPages): ?><a href="admin.php?<?= $search!==''?'q='.rawurlencode($search).'&amp;':'' ?>page=<?= $page+1 ?>#song-deletion">Next →</a><?php endif; ?></nav><?php endif; ?></section></section><?php endif; ?></main>
+<div class="section-head"><div><p class="eyebrow">LIBRARY MANAGEMENT</p><h1>Music studio</h1></div></div><section class="panel"><h2>Upload multiple MP3s</h2><p class="muted">Select as many MP3 files as your hosting limits allow. Each file can be up to 25 MB. Titles are taken from filenames; artist and album below apply to every selected track.</p><form method="post" enctype="multipart/form-data" class="form" data-ajax-upload><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><input type="hidden" name="ajax_upload" value="1"><label>MP3 files<input type="file" name="mp3[]" accept=".mp3,audio/mpeg" multiple required></label><div class="form-grid"><label>Artist for all tracks<input name="artist" placeholder="Optional — Unknown artist"></label><label>Album for all tracks<input name="album" placeholder="Optional — Unknown album"></label></div><button class="primary">Upload selected tracks</button></form></section><section class="panel" id="song-deletion"><div class="section-head"><h2>Song Deletion Centre</h2><a class="text-link" href="admin-extract-artwork.php">Extract embedded covers from existing songs</a><span class="muted"><?= (int)$totalTracks ?><?= $search!==''?' matching':'' ?> tracks · Page <?= (int)$page ?> / <?= (int)$totalPages ?></span></div><form method="get" action="admin.php#song-deletion" class="form" style="margin:0 0 18px"><label>Search songs<input type="search" name="q" value="<?= h($search) ?>" placeholder="Search title, artist or album" autocomplete="off"></label><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="secondary" type="submit">Search</button><?php if($search!==''): ?><a class="text-link" href="admin.php#song-deletion">Clear search</a><?php endif; ?></div></form><?php if(!$tracks): ?><p class="muted"><?= $search!==''?'No matching songs found.':'No music uploaded yet.' ?></p><?php else: ?><div class="admin-list"><?php foreach($tracks as $t): ?><div class="admin-track"><div><strong><?= h($t['title']) ?></strong><small><?= h($t['artist']) ?> · <?= h($t['album']) ?></small></div><div class="admin-track-actions"><a class="text-link" href="admin-artwork.php?id=<?= (int)$t['id'] ?>">Artwork</a><form method="post" action="admin.php?<?= $search!==''?'q='.rawurlencode($search).'&amp;':'' ?>page=<?= (int)$page ?>#song-deletion" onsubmit="return confirm('Permanently delete this track?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>"><button class="danger">Delete</button></form></div></div><?php endforeach; ?></div><?php endif; ?><?php if($totalPages>1): ?><nav class="admin-pagination" aria-label="Song list pages"><?php if($page>1): ?><a href="admin.php?<?= $search!==''?'q='.rawurlencode($search).'&amp;':'' ?>page=<?= $page-1 ?>#song-deletion">← Previous</a><?php endif; ?><span>Page <?= $page ?> of <?= $totalPages ?></span><?php if($page<$totalPages): ?><a href="admin.php?<?= $search!==''?'q='.rawurlencode($search).'&amp;':'' ?>page=<?= $page+1 ?>#song-deletion">Next →</a><?php endif; ?></nav><?php endif; ?></section></section><?php endif; ?></main>
 <?php if (is_admin()): ?>
 <script>
 (function () {
