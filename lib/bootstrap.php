@@ -32,9 +32,15 @@ function csrf_check(): void {
 }
 function is_admin(): bool { return !empty($_SESSION['admin_id']); }
 function require_admin(): void {
-  if (!is_admin()) { http_response_code(401); exit('Admin login required.'); }
+  // Protected routes must never be cached, including denied/expired responses.
   header('Cache-Control: no-store, private, max-age=0');
   header('Pragma: no-cache');
+  header('Vary: Cookie');
+
+  if (!is_admin()) {
+    header('Location: admin.php?login=required', true, 303);
+    exit;
+  }
 
   // A config-backed version revokes every previously issued admin session
   // without needing access to PHP's server-managed session files.
