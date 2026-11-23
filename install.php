@@ -22,6 +22,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       if (!$hashIndex) {
         $pdoInstall->exec("CREATE INDEX idx_tracks_file_hash ON tracks (file_hash)");
       }
+      $pdoInstall->exec("CREATE TABLE IF NOT EXISTS track_plays (track_id BIGINT UNSIGNED NOT NULL PRIMARY KEY, play_count BIGINT UNSIGNED NOT NULL DEFAULT 0, last_played_at TIMESTAMP NULL DEFAULT NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, CONSTRAINT fk_track_plays_track FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
       $config=['db_host'=>$host,'db_name'=>$name,'db_user'=>$user,'db_pass'=>$pass,'admin_user'=>$adminUser,'admin_pass_hash'=>password_hash($adminPass,PASSWORD_DEFAULT),'admin_session_version'=>1];
       $dir=__DIR__.'/storage'; if (!is_dir($dir)) mkdir($dir,0750,true);
       if (!is_dir($dir.'/music')) mkdir($dir.'/music',0750,true);
