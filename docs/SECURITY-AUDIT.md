@@ -81,3 +81,39 @@ Upload/replace these files for the recovery feature:
 5. `lib/admin_auth.php` (shared attempt throttling; new from the earlier security pass)
 
 Also deploy `lib/bootstrap.php` if the earlier session/CSRF hardening has not yet been deployed. Do not overwrite `storage/config.php`, `storage/music/`, database contents, artwork, or unrelated assets.
+
+
+## Administrator route authorization review — 2026-11-24
+
+### Route inventory
+
+The following dedicated administrator routes were source-reviewed and each invokes `require_admin()` before accessing protected data or processing an administrator action:
+
+- `admin-alerts.php`
+- `admin-analytics.php`
+- `admin-artwork.php`
+- `admin-backups.php`
+- `admin-change-password.php`
+- `admin-extract-artwork.php`
+- `admin-integrity.php`
+- `admin-logs.php`
+- `admin-maintenance.php`
+- `admin-songs.php`
+- `admin-upload.php`
+
+`admin.php` is intentionally the public sign-in endpoint. Its dashboard is shown only after the session passes `require_admin()`; privileged POST actions (upload, delete, storage refresh, diagnostics, and logout) are individually guarded. The logout action now explicitly checks authorization before invalidating the session.
+
+`admin-forgot-password.php` is intentionally public and exposes only the recovery workflow. It requires the configured recovery answers, CSRF validation, a shared attempt throttle, and a five-minute session-bound verification before accepting a password reset. It does not grant an admin session; a fresh normal sign-in is required after reset.
+
+`install.php` is only available before `storage/config.php` exists; once installed, it redirects to `admin.php`.
+
+### Guard behavior hardened
+
+- `require_admin()` now sends unauthenticated direct requests to `admin.php?login=required` using HTTP 303.
+- Protected responses receive `Cache-Control: no-store`, `Pragma: no-cache`, and `Vary: Cookie` before authorization is evaluated.
+- Existing session-version revocation, 30-minute idle timeout, and 12-hour absolute lifetime remain enforced.
+- Added `lib/.htaccess` to deny direct HTTP access to internal PHP helper files. PHP filesystem includes continue to work normally.
+
+### Verification limits
+
+This is a source-level route and authorization review. The repository integration does not provide a live unauthenticated HTTP session against the deployed InfinityFree site, so actual HTTP status/redirect behavior, Apache `.htaccess` support, and browser cache behavior still require deployment testing. No claim is made that those runtime checks have been performed.
