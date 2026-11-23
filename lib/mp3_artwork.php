@@ -139,7 +139,8 @@ function rivune_optimize_artwork(array $artwork): ?array {
   }
   $encoded=ob_get_clean();
   imagedestroy($canvas); imagedestroy($image);
-  if (!$saved || !is_string($encoded) || $encoded==='' || strlen($encoded)>=strlen($data)) return $artwork;
+  $wasResized=$targetWidth<$width || $targetHeight<$height;
+  if (!$saved || !is_string($encoded) || $encoded==='' || (strlen($encoded)>=strlen($data) && !$wasResized)) return $artwork;
   return ['extension'=>$outputExtension,'data'=>$encoded];
 }
 
