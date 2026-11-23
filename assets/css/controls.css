@@ -1,0 +1,25 @@
+/* Shared input, button and focus normalization. */
+/* Cross-device control normalization: stable geometry, alignment and iOS form rendering. */
+:root{
+  --rivune-control-size:44px;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+button,input,select,textarea{font:inherit;max-width:100%}
+button{
+  -webkit-appearance:none;
+  appearance:none;
+  box-sizing:border-box;
+  line-height:1.2;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+}
+
+input[type=range]{
+  min-width:0;
+  touch-action:pan-x;
+}
