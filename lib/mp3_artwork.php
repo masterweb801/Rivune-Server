@@ -108,7 +108,7 @@ function rivune_save_embedded_artwork(int $trackId, array $artwork): bool {
   $extension=(string)$artwork['extension'];
   $data=$artwork['data'];
   if (!in_array($extension,$extensions,true) || !is_string($data) || $data==='' || strlen($data)>5*1024*1024) return false;
-  $directory=__DIR__.'/storage/artwork';
+  $directory=dirname(__DIR__).'/storage/artwork';
   if (!is_dir($directory) && !@mkdir($directory,0750,true) && !is_dir($directory)) return false;
   $temporary=$directory.'/'.bin2hex(random_bytes(16)).'.tmp';
   if (@file_put_contents($temporary,$data,LOCK_EX)!==strlen($data)) { @unlink($temporary); return false; }
