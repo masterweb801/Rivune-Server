@@ -5,14 +5,14 @@
   let nativeMode=false, nativePlaybackState=null;
   const $=id=>document.getElementById(id);
   const fmt=n=>Number.isFinite(n)&&n>0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
-  function setArtwork(element,url,alt){
+  function setArtwork(element,url,alt,priority=false){
     if(!element)return;
     const normalizedUrl=url?String(url):'';
     if(element.dataset.artworkUrl===normalizedUrl)return;
     element.dataset.artworkUrl=normalizedUrl;
     element.replaceChildren();
     if(url){
-      const image=document.createElement('img');image.src=String(url);image.alt=alt||'Track artwork';image.loading='lazy';
+      const image=document.createElement('img');image.src=String(url);image.alt=alt||'Track artwork';image.loading=priority?'eager':'lazy';image.decoding='async';if(priority)image.fetchPriority='high';
       image.addEventListener('error',()=>{element.replaceChildren();const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);},{once:true});
       element.append(image);
     }else{const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);}
@@ -44,7 +44,7 @@
     $('count').textContent=tracks.length+' '+(tracks.length===1?'track':'tracks');list.replaceChildren();
     if(!shown.length){const p=document.createElement('p');p.className='empty';p.textContent=tracks.length?'No tracks match your search.':'The library is empty for now. Check back soon.';list.append(p);return;}
     shown.forEach(t=>{
-      const row=document.createElement('button');row.type='button';row.className='track'+(queue[current]?.id===t.id?' active':'');
+      const row=document.createElement('button');row.type='button';row.dataset.trackId=String(t.id);row.className='track'+(queue[current]?.id===t.id?' active':'');
       const art=document.createElement('span');art.className='track-art';setArtwork(art,t.artwork_url,(t.title||'Track')+' artwork');
       const info=document.createElement('span');info.className='track-meta';
       const title=document.createElement('strong');title.textContent=String(t.title||'Untitled');
@@ -53,17 +53,21 @@
       info.append(title,sub);row.append(art,info,play);row.addEventListener('click',()=>playTrack(t));list.append(row);
     });
   }
-  function sync(renderList=true){
+  function updateActiveTrack(){
+    const activeId=queue[current]?String(queue[current].id):'';
+    list.querySelectorAll('.track[data-track-id]').forEach(row=>row.classList.toggle('active',row.dataset.trackId===activeId));
+  }
+  function sync(){
     const t=queue[current],playing=nativeMode?!!nativePlaybackState?.isPlaying:!audio.paused;
     $('now-title').textContent=t?.title||'Nothing playing';$('now-artist').textContent=t?.artist||'Choose a track';
-    setArtwork($('cover'),t?.artwork_url,(t?.title||'Track')+' artwork');
-    setArtwork($('expanded-art'),t?.artwork_url,(t?.title||'Track')+' artwork');
+    setArtwork($('cover'),t?.artwork_url,(t?.title||'Track')+' artwork',true);
+    setArtwork($('expanded-art'),t?.artwork_url,(t?.title||'Track')+' artwork',true);
     $('expanded-title').textContent=t?.title||'Nothing playing';$('expanded-artist').textContent=t?.artist||'Choose a track';
     $('toggle').textContent=playing?'Ⅱ':'▶';$('expanded-toggle').textContent=playing?'Ⅱ':'▶';
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
     $('expanded-shuffle').classList.toggle('selected',shuffled);
     $('expanded-shuffle').setAttribute('aria-pressed',shuffled?'true':'false');
-    if(renderList)render();
+    updateActiveTrack();
   }
   function playTrack(t){
     if(shuffled){queue=[t,...tracks.filter(x=>x.id!==t.id).sort(()=>Math.random()-.5)];current=0;}
@@ -99,7 +103,9 @@
   }
   function toggleShuffle(){
     shuffled=!shuffled;const now=queue[current]||null;
-    if(shuffled){const rest=tracks.filter(t=>!now||t.id!==now.id).sort(()=>Math.random()-.5);queue=now?[now,...rest]:rest;current=now?0:-1;}
+    if(shuffled){const rest=tracks.filter(t=>!now||t.id!==now.id);
+      for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}
+      queue=now?[now,...rest]:rest;current=now?0:-1;}
     else{queue=[...tracks];current=now?queue.findIndex(t=>t.id===now.id):-1;}
     if(nativeMode){sendNative('shuffleChanged',{enabled:shuffled});publishQueue();}
     sync();
@@ -153,7 +159,7 @@
       durationMs:Math.max(0,Number(state.durationMs)||0),
       volume:Math.min(1,Math.max(0,Number(state.volume??0.8)))
     };
-    $('expanded-volume').value=String(nativePlaybackState.volume);sync(false);updateTimeline();return true;
+    $('expanded-volume').value=String(nativePlaybackState.volume);sync();updateTimeline();return true;
   }
   function onNativeError(input){
     const message=typeof input==='string'?input:String(input?.message||'Native playback error');
