@@ -117,12 +117,12 @@
   function next(){
     if(!queue.length)return;
     if(nativeMode){sendNative('next');return;}
-    current=(current+1)%queue.length;audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
+    current=(current+1)%queue.length;recordPlay(queue[current].id);audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
   }
   function previous(){
     if(nativeMode){if(Number(nativePlaybackState?.positionMs||0)>3000){sendNative('seek',{positionMs:0});return;}sendNative('previous');return;}
     if(audio.currentTime>3){audio.currentTime=0;return;}
-    if(!queue.length)return;current=(current-1+queue.length)%queue.length;audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
+    if(!queue.length)return;current=(current-1+queue.length)%queue.length;recordPlay(queue[current].id);audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
   }
   function togglePlayback(){
     if(nativeMode){
