@@ -31,7 +31,7 @@ $state = $ready ? rivune_maintenance_state($pdo) : ['enabled'=>false,'message'=>
 <title>RIVUNE | Maintenance Mode</title>
 <link rel="icon" type="image/png" href="public/assets/rivune-logo.png">
 <link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=modular-theme-1">
+<link rel="stylesheet" href="assets/css/app.css?v=app-split-2">
 <style>
 .mwrap{width:min(900px,calc(100% - 32px));margin:40px auto 70px}.mtop{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}.mcard{padding:24px;margin:18px 0;border:1px solid var(--line);border-radius:18px;background:var(--surface)}.mstatus{display:flex;align-items:center;gap:10px;font-weight:700}.mdot{width:10px;height:10px;border-radius:50%;background:#22c55e}.mdot.on{background:#f59e0b}.mtoggle{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid var(--line);border-radius:14px;margin:18px 0}.mtoggle input{width:20px;height:20px;accent-color:var(--accent,#a78bfa)}.mcard textarea{width:100%;min-height:130px;resize:vertical;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--background,#11111d);color:var(--text);font:inherit;line-height:1.6}.mhelp{font-size:13px;color:var(--muted);line-height:1.7}.mactions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:18px}@media(max-width:600px){.mtop{align-items:flex-start;flex-direction:column}.mcard{padding:17px}}
 </style>
