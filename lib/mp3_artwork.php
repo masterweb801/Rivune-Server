@@ -101,6 +101,48 @@ function rivune_extract_mp3_artwork(string $path): ?array {
   return $fallbackArtwork??null;
 }
 
+/**
+ * Re-encode artwork to a smaller, bounded image when GD is available.
+ * WebP is preferred; original validated bytes remain a safe fallback on hosts
+ * without GD/WebP support.
+ */
+function rivune_optimize_artwork(array $artwork): ?array {
+  $extension=(string)($artwork['extension']??'');
+  $data=$artwork['data']??null;
+  if (!in_array($extension,['jpg','png','webp'],true) || !is_string($data) || $data==='' || strlen($data)>5*1024*1024) return null;
+  $info=@getimagesizefromstring($data);
+  if (!$info || (int)$info[0]<1 || (int)$info[1]<1 || (int)$info[0]>6000 || (int)$info[1]>6000 || (int)$info[0]*(int)$info[1]>24000000) return null;
+  if (!function_exists('imagecreatefromstring')) return $artwork;
+  $image=@imagecreatefromstring($data);
+  if (!$image) return $artwork;
+  $width=imagesx($image); $height=imagesy($image);
+  $maxDimension=1200;
+  $scale=min(1,$maxDimension/max($width,$height));
+  $targetWidth=max(1,(int)round($width*$scale));
+  $targetHeight=max(1,(int)round($height*$scale));
+  $canvas=imagecreatetruecolor($targetWidth,$targetHeight);
+  if (!$canvas) { imagedestroy($image); return $artwork; }
+  if (function_exists('imagealphablending')) imagealphablending($canvas,false);
+  if (function_exists('imagesavealpha')) imagesavealpha($canvas,true);
+  $transparent=imagecolorallocatealpha($canvas,0,0,0,127);
+  imagefilledrectangle($canvas,0,0,$targetWidth,$targetHeight,$transparent);
+  imagecopyresampled($canvas,$image,0,0,0,0,$targetWidth,$targetHeight,$width,$height);
+  ob_start();
+  $saved=false; $outputExtension=$extension;
+  if (function_exists('imagewebp')) {
+    $saved=@imagewebp($canvas,null,80);
+    $outputExtension='webp';
+  } elseif ($extension==='jpg' && function_exists('imagejpeg')) {
+    $saved=@imagejpeg($canvas,null,82);
+  } elseif ($extension==='png' && function_exists('imagepng')) {
+    $saved=@imagepng($canvas,null,8);
+  }
+  $encoded=ob_get_clean();
+  imagedestroy($canvas); imagedestroy($image);
+  if (!$saved || !is_string($encoded) || $encoded==='' || strlen($encoded)>=strlen($data)) return $artwork;
+  return ['extension'=>$outputExtension,'data'=>$encoded];
+}
+
 /** Store a validated extracted cover without risking the uploaded MP3. */
 function rivune_save_embedded_artwork(int $trackId, array $artwork): bool {
   if ($trackId<1 || !isset($artwork['extension'],$artwork['data'])) return false;
@@ -108,6 +150,10 @@ function rivune_save_embedded_artwork(int $trackId, array $artwork): bool {
   $extension=(string)$artwork['extension'];
   $data=$artwork['data'];
   if (!in_array($extension,$extensions,true) || !is_string($data) || $data==='' || strlen($data)>5*1024*1024) return false;
+  $optimized=rivune_optimize_artwork($artwork);
+  if ($optimized===null) return false;
+  $extension=(string)$optimized['extension'];
+  $data=$optimized['data'];
   $directory=dirname(__DIR__).'/storage/artwork';
   if (!is_dir($directory) && !@mkdir($directory,0750,true) && !is_dir($directory)) return false;
   $temporary=$directory.'/'.bin2hex(random_bytes(16)).'.tmp';
