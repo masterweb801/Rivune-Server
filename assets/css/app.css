@@ -132,10 +132,10 @@ body.player-expanded{overflow:hidden;}
 .rivune-nav-group-label{display:block;padding:0 5px;color:var(--muted);font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;opacity:.72}
 .rivune-admin-menu .rivune-nav-group-label{padding:9px 10px 4px}
 @media(max-width:1050px){.rivune-nav-group-label{display:none}.rivune-admin-menu .rivune-nav-group-label{display:block}.rivune-nav-group{padding-right:0;margin-right:0;border:0}}
-.rivune-admin-desktop-nav>a,.rivune-admin-menu>a{display:inline-flex;align-items:center;min-height:38px;padding:9px 11px;border-radius:10px;color:var(--muted);font-size:12px;font-weight:650;text-decoration:none;transition:background .18s,color .18s}
-.rivune-admin-desktop-nav>a:hover,.rivune-admin-menu>a:hover{background:var(--raised);color:var(--text)}
-.rivune-admin-desktop-nav>a.is-active,.rivune-admin-menu>a.is-active{background:var(--accent-soft,rgba(130,100,255,.14));color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 32%,transparent)}
-.rivune-admin-desktop-nav>a[aria-current=page]::before,.rivune-admin-menu>a[aria-current=page]::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:7px}
+.rivune-admin-desktop-nav>a,.rivune-nav-group>a,.rivune-admin-menu>a{display:inline-flex;align-items:center;min-height:38px;padding:9px 11px;border-radius:10px;color:var(--muted);font-size:12px;font-weight:650;text-decoration:none;transition:background .18s,color .18s}
+.rivune-admin-desktop-nav>a:hover,.rivune-nav-group>a:hover,.rivune-admin-menu>a:hover{background:var(--raised);color:var(--text)}
+.rivune-admin-desktop-nav>a.is-active,.rivune-nav-group>a.is-active,.rivune-admin-menu>a.is-active{background:var(--accent-soft,rgba(130,100,255,.14));color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 32%,transparent)}
+.rivune-admin-desktop-nav>a[aria-current=page]::before,.rivune-nav-group>a[aria-current=page]::before,.rivune-admin-menu>a[aria-current=page]::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;margin-right:7px}
 .rivune-admin-desktop-nav form,.rivune-admin-menu form{margin:0}
 .rivune-nav-logout{min-height:38px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
 .rivune-nav-logout:hover{border-color:#d65d68;color:#e16b75;background:rgba(214,93,104,.08)}
