@@ -117,3 +117,54 @@ The following dedicated administrator routes were source-reviewed and each invok
 ### Verification limits
 
 This is a source-level route and authorization review. The repository integration does not provide a live unauthenticated HTTP session against the deployed InfinityFree site, so actual HTTP status/redirect behavior, Apache `.htaccess` support, and browser cache behavior still require deployment testing. No claim is made that those runtime checks have been performed.
+
+
+## Follow-up hardening — 2026-11-24
+
+### Music storage path validation
+- Added `rivune_music_storage_path()` to `lib/bootstrap.php`.
+- Database `stored_name` values must match the uploader's generated 40-character lowercase hexadecimal `.mp3` format.
+- Existing files are resolved with `realpath()` and must remain inside `storage/music`; symlinks are rejected.
+- `stream.php`, the administrator delete action, and the integrity scanner use the shared validator.
+- Invalid stored names are not streamed or deleted. The administrator delete action leaves the affected record and files untouched for investigation.
+
+### Public play-event abuse controls
+- `play-event.php` now limits each network address to 30 accepted event attempts per rolling 10-minute window using a database-backed table.
+- Only an HMAC digest of the address is stored; the raw address is not persisted.
+- Session deduplication keys now include both track ID and playback ID.
+- Submitted listening duration is bounded to 30–86,400 seconds. These checks limit abuse but cannot prove that the client actually listened; analytics remain estimates, not verified listening measurements.
+- If the rate-limit table cannot be created or used, the endpoint fails safely with HTTP 503 rather than accepting unlimited events. No Android bridge payload or stream URL contract changed.
+
+### Integrity verification
+- The read-only integrity scanner now validates stored filenames with the shared path validator.
+- It recalculates at most two stored MP3 SHA-256 hashes per scan request and compares them with the database value.
+- Tracks without a recorded hash are skipped, not reported as corrupt. This accommodates legacy records whose hashes were never backfilled.
+- Hash mismatch, malformed hash and unreadable-file findings are reported; no file or database record is modified.
+
+### Retention and export safety
+- Activity logs older than 180 days are pruned in bounded batches of 200 entries during log-table initialization.
+- Resolved alerts older than 180 days are pruned in bounded batches; unresolved alerts are retained.
+- Cleanup is best-effort and cannot prevent logging/alerts if DELETE permission is unavailable.
+- The backup page now labels the SQL export as a database backup and warns that its `DROP TABLE IF EXISTS` statements can replace existing tables during import. MP3 files, artwork and `storage/config.php` remain outside that export.
+- The admin diagnostics page now reports whether persistent database-backed login throttling is available.
+
+### Deployment files for this follow-up
+
+Production files changed in this follow-up:
+
+1. `lib/bootstrap.php`
+2. `stream.php`
+3. `admin.php`
+4. `play-event.php`
+5. `admin-integrity.php`
+6. `admin-backups.php`
+7. `lib/admin_logs.php`
+8. `lib/admin_alerts.php`
+9. `lib/admin_center.php`
+10. `public/.htaccess`
+
+No MP3, artwork, `storage/config.php`, or existing database records are changed. The `play_event_limits` table is created automatically on the first play-event request; no manual migration is required.
+
+### Verification limits
+
+Changes are source-reviewed only. Live InfinityFree HTTP, MySQL DDL permissions, real PHP execution, Apache 2.2/2.4 authorization behavior, and browser/Android playback have not been tested in the deployed environment. The database-backed play-event limiter requires table creation and write permissions; the diagnostics page should be checked after deployment.
