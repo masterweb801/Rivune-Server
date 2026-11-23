@@ -20,6 +20,8 @@ function rivune_admin_logs_ensure(PDO $pdo): bool {
       INDEX idx_admin_logs_created (created_at),
       INDEX idx_admin_logs_event (event_type)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Gradually prune old audit rows; bounded work avoids long shared-host requests.
+    $pdo->exec("DELETE FROM admin_activity_logs WHERE created_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 180 DAY) LIMIT 200");
     $ready = true;
   } catch (Throwable $e) {
     $ready = false;
