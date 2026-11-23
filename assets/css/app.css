@@ -216,3 +216,207 @@ body.player-expanded{overflow:hidden;}
 @keyframes rivune-pulse{0%,100%{opacity:.5}50%{opacity:1}}.load-more-sentinel{height:1px}.load-more-btn{display:block;width:min(100%,260px);margin:16px auto;min-height:44px}.load-more-btn[hidden]{display:none}.library-status{text-align:center;min-height:18px;margin:10px 0 20px;font-size:11px}
 .admin-analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}.admin-analytics-grid .admin-storage-panel{margin:0}
 @media(max-width:760px){.admin-analytics-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.skeleton-row>span,.skeleton-row i,.skeleton-row b{animation:none}}
+
+/* Cross-device control normalization: stable geometry, alignment and iOS form rendering. */
+:root{
+  --rivune-control-size:44px;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+button,input,select,textarea{font:inherit;max-width:100%}
+button{
+  -webkit-appearance:none;
+  appearance:none;
+  box-sizing:border-box;
+  line-height:1.2;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:3px;
+}
+.icon-btn{
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 40px;
+  width:40px;
+  min-width:40px;
+  max-width:40px;
+  height:40px;
+  min-height:40px;
+  max-height:40px;
+  padding:0;
+  line-height:1;
+}
+.play,.collapse-player{
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 auto;
+  width:40px;
+  min-width:40px;
+  max-width:40px;
+  height:40px;
+  min-height:40px;
+  max-height:40px;
+  aspect-ratio:1 / 1;
+  padding:0;
+  border-radius:50%;
+  line-height:1;
+  text-align:center;
+}
+.control{
+  display:inline-grid;
+  place-items:center;
+  flex:0 0 36px;
+  width:36px;
+  min-width:36px;
+  max-width:36px;
+  height:36px;
+  min-height:36px;
+  max-height:36px;
+  aspect-ratio:1 / 1;
+  padding:0;
+  border-radius:50%;
+  line-height:1;
+  text-align:center;
+}
+.mini-controls,.expanded-controls{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-wrap:nowrap;
+}
+.mini-controls{gap:10px}
+.mini-controls .play{flex:0 0 40px}
+.expanded-controls{gap:clamp(18px,5vw,38px)}
+.expanded-controls .play{
+  width:62px;
+  min-width:62px;
+  max-width:62px;
+  height:62px;
+  min-height:62px;
+  max-height:62px;
+  flex:0 0 62px;
+}
+.collapse-player{width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px;flex:0 0 44px}
+.random-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  min-height:40px;
+  line-height:1.15;
+  padding:0 13px;
+}
+.primary,.secondary,.danger,.rivune-nav-logout,
+.admin-pagination a,.admin-track-actions .text-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  min-height:var(--rivune-control-size);
+  line-height:1.25;
+  text-align:center;
+  vertical-align:middle;
+  -webkit-appearance:none;
+  appearance:none;
+}
+.primary,.secondary,.danger{
+  padding:11px 16px;
+  white-space:normal;
+}
+.admin-pagination a,.admin-track-actions .text-link{padding:0 14px}
+.rivune-nav-logout{padding:0 14px}
+.form input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.form select,.form textarea{
+  min-height:44px;
+  box-sizing:border-box;
+  -webkit-appearance:none;
+  appearance:none;
+  border-radius:10px;
+  font-size:16px;
+}
+.form input[type=file]{
+  width:100%;
+  min-width:0;
+  font-size:14px;
+  line-height:1.4;
+}
+.form input[type=checkbox],.form input[type=radio]{accent-color:var(--accent)}
+input[type=range]{
+  min-width:0;
+  touch-action:pan-x;
+}
+.top,.wrap,.admin-wrap,.rivune-admin-header,.panel,.section-head,
+.admin-track,.admin-track-actions,.admin-metric-grid,.admin-analytics-grid{
+  min-width:0;
+}
+.top-actions{flex:0 0 auto;min-width:0}
+.brand{flex:0 1 auto}
+.player-inner{grid-template-columns:minmax(0,1fr) auto}
+.mini-now{min-width:0}
+.mini-controls{min-width:0}
+.track,.admin-track{min-width:0}
+.admin-track-actions{min-width:0}
+.admin-tool-actions button{width:auto;max-width:100%}
+@media(max-width:900px){
+  .rivune-admin-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    flex-wrap:nowrap;
+    gap:12px;
+  }
+  .rivune-admin-desktop-nav{display:none}
+  .rivune-admin-mobile-nav{display:block;flex:0 0 auto}
+  .rivune-admin-menu{max-width:calc(100vw - 24px)}
+  .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:760px){
+  .player-inner{
+    grid-template-columns:minmax(0,1fr) auto;
+    column-gap:12px;
+  }
+  .mini-controls{gap:8px}
+  .mini-controls .control{flex-basis:34px;width:34px;min-width:34px;max-width:34px;height:34px;min-height:34px;max-height:34px}
+  .mini-controls .play{flex-basis:40px;width:40px;min-width:40px;max-width:40px;height:40px;min-height:40px;max-height:40px}
+  .admin-tool-actions{grid-template-columns:minmax(0,1fr)}
+  .admin-tool-actions button{width:100%;min-height:44px}
+  .section-head{align-items:flex-start;gap:12px;flex-wrap:wrap}
+}
+@media(max-width:520px){
+  .form-grid{grid-template-columns:minmax(0,1fr)}
+  .panel{padding:clamp(16px,4.5vw,20px)}
+  .admin-track{grid-template-columns:minmax(0,1fr);row-gap:10px}
+  .admin-track-actions{
+    justify-self:start;
+    justify-content:flex-start;
+    margin-left:0;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .admin-track-actions .text-link,.admin-track-actions .danger{
+    min-height:44px;
+  }
+  .admin-pagination{gap:8px}
+  .admin-pagination a{min-width:92px;padding:0 10px}
+  .top-actions{gap:8px}
+  .random-btn{min-height:38px;padding:0 10px}
+}
+@media(max-width:360px){
+  .top{width:calc(100% - 20px)}
+  .brand{gap:8px;font-size:14px;letter-spacing:.12em}
+  .brand-logo{width:26px;height:26px;min-width:26px;min-height:26px;flex-basis:26px}
+  .random-btn{gap:4px;padding:0 8px;font-size:10px}
+  .icon-btn{flex-basis:38px;width:38px;min-width:38px;max-width:38px;height:38px;min-height:38px;max-height:38px}
+  .mini-controls{gap:5px}
+  .mini-controls .control{flex-basis:32px;width:32px;min-width:32px;max-width:32px;height:32px;min-height:32px;max-height:32px}
+}
+@supports(padding:max(0px)){
+  .player{padding-bottom:max(14px,env(safe-area-inset-bottom))}
+  .expanded-player{
+    padding-top:max(18px,env(safe-area-inset-top));
+    padding-bottom:max(22px,env(safe-area-inset-bottom));
+  }
+}
