@@ -2,7 +2,8 @@
 
 ## What is included
 
-- On every MP3 upload, RIVUNE reads the embedded ID3v2 APIC (and ID3v2.2 PIC) cover frame and extracts a validated JPEG, PNG, or WebP image automatically. No separate artwork upload is needed for tracks that already contain album art.
+- On every MP3 upload, RIVUNE reads the embedded ID3v2 APIC (and ID3v2.2 PIC) cover frame and extracts a validated JPEG, PNG, or WebP image automatically. It prefers the ID3 front-cover frame. No separate artwork upload is needed for tracks that already contain album art.
+- The admin library includes a batched scan at `admin-extract-artwork.php` to extract covers from MP3s uploaded before this feature. It processes 10 tracks per request and preserves any artwork already present, including manual overrides.
 - Embedded images are limited to 5 MB and 6000 × 6000 pixels / 24 megapixels. Unsupported, malformed, oversized, or missing covers are safely ignored; the player shows its fallback.
 - The admin artwork upload remains optional and acts as a manual override. A newly uploaded MP3 with an embedded cover replaces the existing cover for that track; an MP3 without a cover does not erase an existing manual cover.
 
@@ -28,6 +29,8 @@ Upload/replace these files from the `dev` branch:
 - `assets/js/app.js`
 - `assets/css/app.css`
 - `admin-artwork.php` (new)
+- `admin-extract-artwork.php` (new)
+- `lib/mp3_artwork.php` (new)
 - `artwork.php` (new)
 
 The first artwork upload creates `storage/artwork/` automatically. If your host does not permit PHP to create it, create that folder manually under `storage/` and set permissions consistent with the existing `storage/music/` folder.
@@ -37,6 +40,7 @@ Do not overwrite or delete `storage/config.php`, `storage/music/`, existing artw
 ## Manual test
 
 1. Upload an MP3 that has embedded album art in its ID3 tag.
+2. For older uploads, open Admin → Song Deletion Centre → Extract embedded covers from existing songs and continue the scan until it completes.
 2. Confirm the uploaded track receives artwork automatically in the library, mini-player, and expanded player.
 3. Upload an MP3 with no embedded cover and confirm the fallback appears.
 4. Optionally open the track's Artwork admin page to apply a manual override.
