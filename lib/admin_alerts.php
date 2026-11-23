@@ -22,6 +22,8 @@ function rivune_alerts_ensure(PDO $pdo): bool {
       INDEX idx_admin_alerts_open (resolved_at, id),
       INDEX idx_admin_alerts_key (alert_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    // Keep unresolved alerts indefinitely; prune only old resolved history in bounded batches.
+    $pdo->exec("DELETE FROM admin_alerts WHERE resolved_at IS NOT NULL AND resolved_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 180 DAY) LIMIT 200");
     $ready = true;
   } catch (Throwable $e) { $ready = false; }
   return $ready;
