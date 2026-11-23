@@ -48,20 +48,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       if (!is_dir($directory) && !mkdir($directory,0750,true) && !is_dir($directory)) {
         $error='Could not create the artwork folder. Check storage permissions.';
       } else {
-        $extension=$types[$mime];
-        $temporary=$directory.'/'.bin2hex(random_bytes(16)).'.tmp';
-        $destination=$directory.'/'.$id.'.'.$extension;
-        if (!move_uploaded_file($file['tmp_name'],$temporary)) {
-          $error='Could not save the uploaded artwork.';
-        } elseif (!@rename($temporary,$destination)) {
-          @unlink($temporary);
-          $error='Could not finalize the artwork file.';
+        require_once __DIR__.'/lib/mp3_artwork.php';
+        $payload=['extension'=>$types[$mime],'data'=>(string)file_get_contents($file['tmp_name'])];
+        if (!rivune_save_embedded_artwork((int)$id,$payload)) {
+          $error='Could not optimize or save the artwork. Check image support and storage permissions.';
         } else {
-          foreach (['jpg','png','webp'] as $other) {
-            $old=$directory.'/'.$id.'.'.$other;
-            if ($other!==$extension && is_file($old)) @unlink($old);
-          }
-          rivune_admin_log($pdo,'artwork','success','Updated artwork for track #'.(int)$id.'.');
+          rivune_admin_log($pdo,'artwork','success','Updated and optimized artwork for track #'.(int)$id.'.');
           header('Location: admin-artwork.php?id='.$id.'&saved=1'); exit;
         }
       }
@@ -76,5 +68,5 @@ $currentArtwork=rivune_artwork_path((int)$id);
 <?php if ($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
 <?php if (isset($_GET['saved'])): ?><p class="success">Artwork updated. It will appear in the public player.</p><?php elseif (isset($_GET['removed'])): ?><p class="success">Artwork removed. The player will use its fallback cover.</p><?php endif; ?>
 <?php if ($currentArtwork): ?><img class="artwork-preview" src="artwork.php?id=<?= (int)$id ?>&amp;v=<?= (int)filemtime($currentArtwork) ?>" alt="Current track artwork"><form method="post" class="artwork-actions" onsubmit="return confirm('Remove this track artwork?')"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="remove"><button class="danger" type="submit">Remove artwork</button></form><?php else: ?><div class="artwork-preview" style="display:grid;place-items:center;color:var(--accent);font-size:64px">♫</div><p class="muted">No artwork is set for this track yet.</p><?php endif; ?>
-<form method="post" enctype="multipart/form-data" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><label>Choose artwork<input type="file" name="artwork" accept="image/jpeg,image/png,image/webp" required><small>JPEG, PNG, or WebP · maximum 5 MB · square images look best.</small></label><button class="primary" type="submit">Save artwork</button></form>
+<form method="post" enctype="multipart/form-data" class="form"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="upload"><label>Choose artwork<input type="file" name="artwork" accept="image/jpeg,image/png,image/webp" required><small>JPEG, PNG, or WebP · maximum 5 MB. RIVUNE automatically resizes and compresses artwork when server image support is available.</small></label><button class="primary" type="submit">Save artwork</button></form>
 <p class="artwork-actions"><a class="text-link" href="admin.php#song-deletion">← Back to music library</a></p></section></main></body></html>
