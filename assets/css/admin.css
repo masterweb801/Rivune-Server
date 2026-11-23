@@ -137,3 +137,14 @@
 .rivune-nav-logout{display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box;min-height:var(--rivune-control-size,44px);padding:0 14px;}
 @media(max-width:900px){.rivune-admin-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:nowrap;gap:12px}.rivune-admin-desktop-nav{display:none}.rivune-admin-mobile-nav{display:block;flex:0 0 auto}.rivune-admin-menu{max-width:calc(100vw - 24px)}}
 @media(max-width:760px){.admin-tool-actions{grid-template-columns:minmax(0,1fr)}.admin-tool-actions button{width:100%;min-height:44px}}
+
+
+/* Admin surfaces follow the same RIVUNE radius scale as the public player. */
+.admin-metric,.admin-storage-panel,.admin-panel,.panel{border-radius:var(--radius-panel);}
+.admin-warning,.admin-pagination a,.admin-mobile-menu summary,
+.admin-mobile-menu .admin-quick-links,.admin-desktop-links a,
+.admin-quick-links a,.rivune-admin-desktop-nav>a,
+.rivune-nav-group>a,.rivune-admin-menu>a{border-radius:var(--radius-sm);}
+.admin-status{border-radius:var(--radius-pill);}
+.admin-track,.admin-track-actions button,.admin-tool-actions button,
+.rivune-nav-logout{border-radius:var(--radius-sm);}
