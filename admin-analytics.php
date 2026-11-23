@@ -1,0 +1,19 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/lib/bootstrap.php';require_admin();
+$error='';
+try{
+$pdo->exec("CREATE TABLE IF NOT EXISTS track_plays (track_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,play_count BIGINT UNSIGNED NOT NULL DEFAULT 0,last_played_at TIMESTAMP NULL DEFAULT NULL,updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,CONSTRAINT fk_track_plays_track FOREIGN KEY(track_id) REFERENCES tracks(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+$summary=$pdo->query('SELECT COALESCE(SUM(play_count),0) total_plays,COUNT(*) tracked_songs,MAX(last_played_at) last_play FROM track_plays')->fetch();
+$totalSongs=(int)$pdo->query('SELECT COUNT(*) FROM tracks')->fetchColumn();
+$top=$pdo->query('SELECT t.id,t.title,t.artist,COALESCE(p.play_count,0) play_count FROM tracks t LEFT JOIN track_plays p ON p.track_id=t.id ORDER BY COALESCE(p.play_count,0) DESC,t.title ASC LIMIT 20')->fetchAll();
+$least=$pdo->query('SELECT t.id,t.title,t.artist,COALESCE(p.play_count,0) play_count FROM tracks t LEFT JOIN track_plays p ON p.track_id=t.id ORDER BY COALESCE(p.play_count,0) ASC,t.title ASC LIMIT 20')->fetchAll();
+}catch(Throwable $e){$error='Could not initialize or read song analytics. Check database permissions.';$summary=['total_plays'=>0,'tracked_songs'=>0,'last_play'=>null];$totalSongs=0;$top=[];$least=[];}
+function analytics_count($v):string{return number_format((int)$v);}
+?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Song analytics | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/app.css"></head><body><main class="admin-wrap"><?php $adminActivePage='analytics';require __DIR__.'/lib/admin_navigation.php';?><section class="panel"><p class="eyebrow">SONGS · PERFORMANCE</p><div class="section-head"><h1>Song analytics</h1><span class="muted">Lifetime play counts</span></div>
+<?php if($error):?><p class="error"><?=h($error)?></p><?php else:?>
+<div class="admin-metric-grid"><article class="admin-metric"><span>Total intentional plays</span><strong><?=analytics_count($summary['total_plays'])?></strong></article><article class="admin-metric"><span>Tracks in library</span><strong><?=analytics_count($totalSongs)?></strong></article><article class="admin-metric"><span>Tracks with plays</span><strong><?=analytics_count($summary['tracked_songs'])?></strong></article><article class="admin-metric"><span>Last recorded play</span><strong style="font-size:15px"><?= $summary['last_play']?h(date('M j, Y · g:i A',strtotime($summary['last_play']))):'No plays yet' ?></strong></article></div>
+<p class="muted">A play is counted when a listener deliberately starts a track. Repeated starts of the same track in one browser session are deduplicated for 30 seconds. Seeking, buffering and stream chunks do not add plays.</p>
+<div class="admin-analytics-grid"><section class="admin-storage-panel"><h2>Most played</h2><p class="muted">Current top performers</p><div class="admin-list"><?php foreach($top as $i=>$t):?><div class="admin-track"><div><strong><?=($i+1)?>. <?=h($t['title'])?></strong><small><?=h($t['artist'])?></small></div><strong><?=analytics_count($t['play_count'])?> plays</strong></div><?php endforeach;?></div></section>
+<section class="admin-storage-panel"><h2>Least played</h2><p class="muted">Includes songs with zero recorded plays</p><div class="admin-list"><?php foreach($least as $t):?><div class="admin-track"><div><strong><?=h($t['title'])?></strong><small><?=h($t['artist'])?></small></div><strong><?=analytics_count($t['play_count'])?> plays</strong></div><?php endforeach;?></div></section></div>
+<?php endif;?></section></main></body></html>
