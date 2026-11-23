@@ -12,8 +12,8 @@ $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if (!$id || $id<1) { http_response_code(400); exit('Invalid track.'); }
 $stmt=$pdo->prepare('SELECT stored_name,original_name FROM tracks WHERE id=?'); $stmt->execute([$id]); $track=$stmt->fetch();
 if (!$track) { http_response_code(404); exit('Track not found.'); }
-$file=__DIR__.'/storage/music/'.$track['stored_name'];
-if (!is_file($file) || !is_readable($file)) { http_response_code(404); exit('Audio file missing.'); }
+$file=rivune_music_storage_path((string)$track['stored_name']);
+if ($file === null || !is_file($file) || !is_readable($file)) { http_response_code(404); exit('Audio file missing.'); }
 $size=filesize($file); if ($size===false || $size<1) { http_response_code(404); exit('Audio file is empty.'); }
 $start=0; $end=$size-1;
 header('Content-Type: audio/mpeg'); header('Accept-Ranges: bytes'); header('Content-Disposition: inline; filename="'.rawurlencode($track['original_name']).'"');
