@@ -6,10 +6,25 @@ rivune_maintenance_enforce($pdo, 'json');
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 try {
-  $stmt=$pdo->query('SELECT id,title,artist,album,original_name,created_at FROM tracks ORDER BY title COLLATE utf8mb4_unicode_ci, id DESC');
-  $tracks=[];
-  foreach ($stmt as $row) {
+  $paginated = isset($_GET['limit']) || isset($_GET['page']) || isset($_GET['q']) || isset($_GET['sort']);
+  $limit = max(1, min(100, (int)($_GET['limit'] ?? 50)));
+  $page = max(1, (int)($_GET['page'] ?? 1));
+  $offset = ($page - 1) * $limit;
+  $search = trim((string)($_GET['q'] ?? ''));
+  $sort = (string)($_GET['sort'] ?? 'popular');
+  $order = $sort === 'newest' ? 't.id DESC' : 'COALESCE(tp.play_count,0) DESC, t.title COLLATE utf8mb4_unicode_ci, t.id DESC';
+  $where = $search !== '' ? " WHERE t.title LIKE ? OR t.artist LIKE ? OR t.album LIKE ?" : '';
+  $countStmt = $pdo->prepare('SELECT COUNT(*) FROM tracks t'.$where);
+  if ($search !== '') { $term = '%'.$search.'%'; $countStmt->execute([$term,$term,$term]); } else { $countStmt->execute(); }
+  $total = (int)$countStmt->fetchColumn();
+  $sql = 'SELECT t.id,t.title,t.artist,t.album,t.original_name,t.created_at,COALESCE(tp.play_count,0) AS play_count FROM tracks t LEFT JOIN track_plays tp ON tp.track_id=t.id'.$where.' ORDER BY '.$order;
+  if ($paginated) $sql .= ' LIMIT '.$limit.' OFFSET '.$offset;
+  $stmt = $pdo->prepare($sql);
+  if ($search !== '') $stmt->execute([$term,$term,$term]); else $stmt->execute();
+  $tracks=[]; $rows=$stmt->fetchAll();
+  foreach ($rows as $row) {
     $id=(int)$row['id'];
+    $row['play_count']=(int)$row['play_count'];
     $row['stream_url']='stream.php?id='.$id;
     $artworkDir=__DIR__.'/storage/artwork';
     $artworkFile=null;
@@ -20,5 +35,7 @@ try {
     $row['artwork_url']=$artworkFile ? 'artwork.php?id='.$id.'&v='.(int)filemtime($artworkFile).'-'.(int)filesize($artworkFile) : null;
     $tracks[]=$row;
   }
-  echo json_encode(['tracks'=>$tracks], JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);
+  $response=['tracks'=>$tracks];
+  if ($paginated) $response['pagination']=['page'=>$page,'limit'=>$limit,'total'=>$total,'has_more'=>($offset+count($tracks))<$total];
+  echo json_encode($response, JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);
 } catch (Throwable $e) { http_response_code(500); echo json_encode(['error'=>'Unable to load the library.']); }
