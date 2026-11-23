@@ -104,9 +104,33 @@
     $('expanded-shuffle').setAttribute('aria-pressed',shuffled?'true':'false');
     updateActiveTrack();
   }
-  function recordPlay(trackId){if(!trackId)return;const body=new URLSearchParams({track_id:String(trackId)});fetch('play-event.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,keepalive:true}).catch(()=>{});}
+  const listenTracker={trackId:null,lastPositionMs:null,listenedMs:0,playId:null,recorded:false};
+  function resetListenTracker(trackId,positionMs=0){
+    listenTracker.trackId=trackId==null?null:String(trackId);
+    listenTracker.lastPositionMs=Number.isFinite(Number(positionMs))?Number(positionMs):0;
+    listenTracker.listenedMs=0;
+    listenTracker.playId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+'-'+Math.random().toString(36).slice(2);
+    listenTracker.recorded=false;
+  }
+  function accumulateListening(trackId,positionMs,isPlaying){
+    if(!isPlaying||trackId==null||!Number.isFinite(positionMs))return;
+    const id=String(trackId);
+    if(listenTracker.trackId!==id)resetListenTracker(id,positionMs);
+    if(listenTracker.lastPositionMs===null){listenTracker.lastPositionMs=positionMs;return;}
+    const delta=positionMs-listenTracker.lastPositionMs;
+    listenTracker.lastPositionMs=positionMs;
+    // Ignore seeks, stalls and large timer gaps. Only count plausible forward playback.
+    if(delta>0&&delta<=2500&&!listenTracker.recorded){
+      listenTracker.listenedMs+=delta;
+      if(listenTracker.listenedMs>=30000){
+        listenTracker.recorded=true;
+        const body=new URLSearchParams({track_id:id,play_id:listenTracker.playId,played_seconds:'30'});
+        fetch('play-event.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,keepalive:true}).catch(()=>{});
+      }
+    }
+  }
   function playTrack(t){
-    recordPlay(t.id);
+    resetListenTracker(t.id,0);
     if(shuffled){queue=[t,...shuffledCopy(tracks.filter(x=>x.id!==t.id))];current=0;}
     else{queue=[...tracks];if(!queue.some(x=>String(x.id)===String(t.id)))queue.unshift(t);current=queue.findIndex(x=>String(x.id)===String(t.id));}
     if(nativeMode){
@@ -119,12 +143,12 @@
   function next(){
     if(!queue.length)return;
     if(nativeMode){sendNative('next');return;}
-    current=(current+1)%queue.length;recordPlay(queue[current].id);audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
+    current=(current+1)%queue.length;resetListenTracker(queue[current].id,0);audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
   }
   function previous(){
     if(nativeMode){if(Number(nativePlaybackState?.positionMs||0)>3000){sendNative('seek',{positionMs:0});return;}sendNative('previous');return;}
     if(audio.currentTime>3){audio.currentTime=0;return;}
-    if(!queue.length)return;current=(current-1+queue.length)%queue.length;recordPlay(queue[current].id);audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
+    if(!queue.length)return;current=(current-1+queue.length)%queue.length;resetListenTracker(queue[current].id,0);audio.src=queue[current].stream_url;audio.play().catch(()=>{});sync();
   }
   function togglePlayback(){
     if(nativeMode){
@@ -155,8 +179,8 @@
     playTrack(choices[Math.floor(Math.random()*choices.length)]);
   }
   function seekTo(value){
-    if(nativeMode){const duration=Number(nativePlaybackState?.durationMs||0);if(duration)sendNative('seek',{positionMs:Math.round(duration*Number(value)/1000)});return;}
-    if(audio.duration)audio.currentTime=audio.duration*Number(value)/1000;
+    if(nativeMode){const duration=Number(nativePlaybackState?.durationMs||0);if(duration){const target=Math.round(duration*Number(value)/1000);listenTracker.lastPositionMs=target;sendNative('seek',{positionMs:target});}return;}
+    if(audio.duration){const target=audio.duration*Number(value)/1000;listenTracker.lastPositionMs=target*1000;audio.currentTime=target;}
   }
   function updateTimeline(){
     const position=nativeMode?Number(nativePlaybackState?.positionMs||0)/1000:audio.currentTime;
@@ -200,7 +224,8 @@
       volume:Math.min(1,Math.max(0,Number(state.volume??0.8)))
     };
     const activeNativeTrackId=queue[current]?.id==null?null:String(queue[current].id);
-    if(nativePlaybackState.isPlaying&&activeNativeTrackId&&activeNativeTrackId!==previousNativeTrackId)recordPlay(activeNativeTrackId);
+    if(activeNativeTrackId&&activeNativeTrackId!==previousNativeTrackId)resetListenTracker(activeNativeTrackId,nativePlaybackState.positionMs);
+    accumulateListening(activeNativeTrackId,nativePlaybackState.positionMs,nativePlaybackState.isPlaying);
     $('expanded-volume').value=String(nativePlaybackState.volume);sync();updateTimeline();return true;
   }
   function onNativeError(input){
@@ -229,8 +254,8 @@
     if(nativeMode)sendNative('setVolume',{volume:value});else audio.volume=value;
   });
   audio.volume=.8;
-  audio.addEventListener('timeupdate',updateTimeline);audio.addEventListener('loadedmetadata',updateTimeline);
-  audio.addEventListener('play',sync);audio.addEventListener('pause',sync);audio.addEventListener('ended',()=>{if(!nativeMode)next();});
+  audio.addEventListener('timeupdate',()=>{const id=queue[current]?.id;accumulateListening(id,audio.currentTime*1000,!audio.paused);updateTimeline();});audio.addEventListener('seeking',()=>{listenTracker.lastPositionMs=audio.currentTime*1000;});audio.addEventListener('seeked',()=>{listenTracker.lastPositionMs=audio.currentTime*1000;});audio.addEventListener('loadedmetadata',updateTimeline);
+  audio.addEventListener('play',()=>{const id=queue[current]?.id;if(id!=null&&listenTracker.trackId!==String(id))resetListenTracker(id,audio.currentTime*1000);sync();});audio.addEventListener('pause',sync);audio.addEventListener('ended',()=>{if(!nativeMode)next();});
   $('collapse-player').addEventListener('click',()=>setExpanded(false));
   $('mini-now').addEventListener('click',()=>setExpanded(true));
   $('mini-now').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpanded(true);}});
