@@ -15,7 +15,8 @@ try {
   $hasPlayStats = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='track_plays'")->fetchColumn() > 0;
   $playCountExpr = $hasPlayStats ? 'COALESCE(tp.play_count,0)' : '0';
   $playJoin = $hasPlayStats ? ' LEFT JOIN track_plays tp ON tp.track_id=t.id' : '';
-  $order = $sort === 'newest' ? 't.id DESC' : $playCountExpr.' DESC, t.title COLLATE utf8mb4_unicode_ci, t.id DESC';
+  // Do not use the literal fallback "0" in ORDER BY: MySQL treats numeric ORDER BY values as column positions, and position 0 is invalid. Without analytics, use a stable ID order.
+  $order = $sort === 'newest' ? 't.id DESC' : ($hasPlayStats ? 'COALESCE(tp.play_count,0) DESC, t.title COLLATE utf8mb4_unicode_ci, t.id DESC' : 't.id DESC');
   $where = $search !== '' ? " WHERE t.title LIKE ? OR t.artist LIKE ? OR t.album LIKE ?" : '';
   $countStmt = $pdo->prepare('SELECT COUNT(*) FROM tracks t'.$where);
   if ($search !== '') { $term = '%'.$search.'%'; $countStmt->execute([$term,$term,$term]); } else { $countStmt->execute(); }
