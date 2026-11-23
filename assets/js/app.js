@@ -5,6 +5,15 @@
   let nativeMode=false, nativePlaybackState=null;
   const $=id=>document.getElementById(id);
   const fmt=n=>Number.isFinite(n)&&n>0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
+  function setArtwork(element,url,alt){
+    if(!element)return;
+    element.replaceChildren();
+    if(url){
+      const image=document.createElement('img');image.src=String(url);image.alt=alt||'Track artwork';image.loading='lazy';
+      image.addEventListener('error',()=>{element.replaceChildren();const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);},{once:true});
+      element.append(image);
+    }else{const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);}
+  }
 
   function snapshot(){
     const t=queue[current]||null;
@@ -33,7 +42,7 @@
     if(!shown.length){const p=document.createElement('p');p.className='empty';p.textContent=tracks.length?'No tracks match your search.':'The library is empty for now. Check back soon.';list.append(p);return;}
     shown.forEach(t=>{
       const row=document.createElement('button');row.type='button';row.className='track'+(queue[current]?.id===t.id?' active':'');
-      const art=document.createElement('span');art.className='track-art';art.textContent='♫';
+      const art=document.createElement('span');art.className='track-art';setArtwork(art,t.artwork_url,(t.title||'Track')+' artwork');
       const info=document.createElement('span');info.className='track-meta';
       const title=document.createElement('strong');title.textContent=String(t.title||'Untitled');
       const sub=document.createElement('small');sub.textContent=String(t.artist||'Unknown artist')+' · '+String(t.album||'Unknown album');
@@ -44,6 +53,8 @@
   function sync(renderList=true){
     const t=queue[current],playing=nativeMode?!!nativePlaybackState?.isPlaying:!audio.paused;
     $('now-title').textContent=t?.title||'Nothing playing';$('now-artist').textContent=t?.artist||'Choose a track';
+    setArtwork($('cover'),t?.artwork_url,(t?.title||'Track')+' artwork');
+    setArtwork($('expanded-art'),t?.artwork_url,(t?.title||'Track')+' artwork');
     $('expanded-title').textContent=t?.title||'Nothing playing';$('expanded-artist').textContent=t?.artist||'Choose a track';
     $('toggle').textContent=playing?'Ⅱ':'▶';$('expanded-toggle').textContent=playing?'Ⅱ':'▶';
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
