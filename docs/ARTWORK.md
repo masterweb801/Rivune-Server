@@ -2,6 +2,10 @@
 
 ## What is included
 
+- On every MP3 upload, RIVUNE reads the embedded ID3v2 APIC (and ID3v2.2 PIC) cover frame and extracts a validated JPEG, PNG, or WebP image automatically. No separate artwork upload is needed for tracks that already contain album art.
+- Embedded images are limited to 5 MB and 6000 × 6000 pixels / 24 megapixels. Unsupported, malformed, oversized, or missing covers are safely ignored; the player shows its fallback.
+- The admin artwork upload remains optional and acts as a manual override. A newly uploaded MP3 with an embedded cover replaces the existing cover for that track; an MP3 without a cover does not erase an existing manual cover.
+
 - Admin-only artwork management at `admin-artwork.php?id=TRACK_ID`.
 - Public artwork delivery through `artwork.php?id=TRACK_ID`; the raw artwork directory remains under protected `storage/`.
 - JPEG, PNG, and WebP uploads up to 5 MB, with image signature/MIME and dimension checks.
@@ -32,11 +36,10 @@ Do not overwrite or delete `storage/config.php`, `storage/music/`, existing artw
 
 ## Manual test
 
-1. Sign in to the admin panel and open a track's Artwork link.
-2. Upload a square JPEG, PNG, or WebP under 5 MB.
-3. Open the public homepage and confirm the artwork appears in the library, mini-player, and expanded player.
-4. Play another track without artwork and confirm the fallback icon appears.
-5. Replace the image, then remove it and confirm the fallback returns.
-6. Confirm playback, seek, next/previous, and the Android bridge still receive the same track/queue fields plus the optional artwork URL.
+1. Upload an MP3 that has embedded album art in its ID3 tag.
+2. Confirm the uploaded track receives artwork automatically in the library, mini-player, and expanded player.
+3. Upload an MP3 with no embedded cover and confirm the fallback appears.
+4. Optionally open the track's Artwork admin page to apply a manual override.
+5. Confirm playback, seek, next/previous, and the Android bridge still receive the same track/queue fields plus the optional artwork URL.
 
 Source implementation only; live InfinityFree and Android-device tests must still be performed after deployment.
