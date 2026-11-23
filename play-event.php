@@ -21,6 +21,7 @@ function rivune_play_event_allow(PDO $pdo, string $identity): array {
         window_started_at = IF(window_started_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE), CURRENT_TIMESTAMP, window_started_at)
     WHERE identity_hash = ?");
   $update->execute([$identity]);
+  try { $pdo->exec("DELETE FROM play_event_limits WHERE updated_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 30 DAY) LIMIT 100"); } catch (Throwable $cleanupError) {}
   $read = $pdo->prepare('SELECT event_count,window_started_at FROM play_event_limits WHERE identity_hash=? LIMIT 1');
   $read->execute([$identity]);
   $row = $read->fetch(PDO::FETCH_ASSOC);
@@ -28,7 +29,7 @@ function rivune_play_event_allow(PDO $pdo, string $identity): array {
   $count = (int)$row['event_count'];
   $started = strtotime((string)$row['window_started_at']) ?: time();
   return [
-    'allowed' => $count <= 30,
+    'allowed' => $count <= 120,
     'retry_after' => max(1, 600 - (time() - $started))
   ];
 }
@@ -64,19 +65,19 @@ try {
   if ($secret === '') throw new RuntimeException('Rate-limit secret unavailable.');
   $address = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
   $identity = hash_hmac('sha256', $address, $secret);
-  $limit = rivune_play_event_allow($pdo, $identity);
-  if (!$limit['allowed']) {
-    http_response_code(429);
-    header('Retry-After: ' . (int)$limit['retry_after']);
-    echo json_encode(['error'=>'Play statistics are temporarily rate-limited.','retry_after'=>(int)$limit['retry_after']]);
-    exit;
-  }
-
   $exists = $pdo->prepare('SELECT id FROM tracks WHERE id=? LIMIT 1');
   $exists->execute([$trackId]);
   if (!$exists->fetchColumn()) {
     http_response_code(404);
     echo json_encode(['error'=>'Track not found']);
+    exit;
+  }
+
+  $limit = rivune_play_event_allow($pdo, $identity);
+  if (!$limit['allowed']) {
+    http_response_code(429);
+    header('Retry-After: ' . (int)$limit['retry_after']);
+    echo json_encode(['error'=>'Play statistics are temporarily rate-limited.','retry_after'=>(int)$limit['retry_after']]);
     exit;
   }
 
