@@ -62,11 +62,11 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 }
 $currentArtwork=rivune_artwork_path((int)$id);
 ?><!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Track artwork | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=app-core-4">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Track artwork | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2">
+<link rel="stylesheet" href="assets/css/app.css?v=app-core-5">
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
-<link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1"></head>
+<link rel="stylesheet" href="assets/css/admin.css?v=admin-module-2"></head>
 <body><main class="admin-wrap"><?php $adminActivePage='song_manage'; require __DIR__.'/lib/admin_navigation.php'; ?>
 <section class="panel"><p class="eyebrow">MUSIC LIBRARY</p><h1>Track artwork</h1><p class="muted"><?= h((string)$track['title']) ?> · <?= h((string)$track['artist']) ?></p><p class="muted">RIVUNE automatically extracts supported embedded album art from MP3 uploads. Uploading an image here sets a manual cover override.</p>
 <?php if ($error): ?><p class="error"><?= h($error) ?></p><?php endif; ?>
