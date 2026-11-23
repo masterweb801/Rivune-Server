@@ -45,3 +45,22 @@ html[data-theme=light]{
   --danger-soft:rgba(194,62,89,.10);
   --accent-soft:rgba(121,85,220,.12);
 }
+
+
+/* Shared geometry tokens: one consistent RIVUNE shape language. */
+:root{
+  --radius-xs:8px;
+  --radius-sm:12px;
+  --radius-md:16px;
+  --radius-lg:22px;
+  --radius-xl:28px;
+  --radius-pill:999px;
+  --radius-control:var(--radius-sm);
+  --radius-card:var(--radius-md);
+  --radius-panel:var(--radius-lg);
+  --radius-artwork:var(--radius-xl);
+  --shadow-soft:0 8px 28px rgba(0,0,0,.12);
+}
+html[data-theme=light]{
+  --shadow-soft:0 8px 28px rgba(48,35,75,.08);
+}
