@@ -22,6 +22,16 @@ function rivune_extract_mp3_artwork(string $path): ?array {
   fclose($fp);
   if ($body===false || strlen($body)!==$tagSize) return null;
   if ((ord($header[5])&0x80)!==0) $body=str_replace("\xFF\x00","\xFF",$body);
+  $bodyOffset=0;
+  if ($major===3 && (ord($header[5])&0x40)!==0 && strlen($body)>=4) {
+    $extended=unpack("N",substr($body,0,4))[1];
+    $bodyOffset=4+$extended;
+  } elseif ($major===4 && (ord($header[5])&0x40)!==0 && strlen($body)>=4) {
+    $extended=0;
+    for ($j=0;$j<4;$j++) $extended=($extended<<7)|ord($body[$j]);
+    $bodyOffset=$extended;
+  }
+  if ($bodyOffset<0 || $bodyOffset>strlen($body)) return null;
 
   $offset=$bodyOffset; $bodyLength=strlen($body);
   while ($offset+($major===2?6:10)<=$bodyLength) {
@@ -63,9 +73,13 @@ function rivune_extract_mp3_artwork(string $path): ?array {
       $cursor=$mimeEnd+1;
     }
     if ($cursor>=strlen($payload)) continue;
-    $cursor++; // picture type
+    $pictureType=ord($payload[$cursor]);
+    $cursor++;
     if ($encoding===1 || $encoding===2) {
-      $terminator=strpos($payload,"\0\0",$cursor);
+      $terminator=false;
+      for ($scan=$cursor;$scan+1<strlen($payload);$scan+=2) {
+        if ($payload[$scan]==="\0" && $payload[$scan+1]==="\0") { $terminator=$scan; break; }
+      }
       if ($terminator===false) continue;
       $cursor=$terminator+2;
     } else {
