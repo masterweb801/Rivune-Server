@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       rivune_admin_log($pdo, 'login', 'failure', 'An administrator sign-in attempt failed.');
       $error = 'Incorrect username or password.';
     }
-  } elseif ($action==='logout') { rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
+  } elseif ($action==='logout') { require_admin(); rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
   elseif ($action==='upload') {
     require_admin();
     $batch=$_FILES['mp3']??null;
