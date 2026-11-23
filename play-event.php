@@ -17,7 +17,7 @@ function rivune_play_event_allow(PDO $pdo, string $identity): array {
   $insert = $pdo->prepare('INSERT IGNORE INTO play_event_limits (identity_hash,event_count,window_started_at) VALUES (?,0,CURRENT_TIMESTAMP)');
   $insert->execute([$identity]);
   $update = $pdo->prepare("UPDATE play_event_limits
-    SET event_count = IF(window_started_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE), 1, event_count + 1),
+    SET event_count = IF(window_started_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE), 1, LEAST(event_count + 1, 65535)),
         window_started_at = IF(window_started_at < DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE), CURRENT_TIMESTAMP, window_started_at)
     WHERE identity_hash = ?");
   $update->execute([$identity]);
