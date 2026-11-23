@@ -128,6 +128,7 @@
   .admin-track-actions{gap:10px;}
   .admin-track-actions .text-link{padding:0 11px;}
   .admin-track-actions .danger{min-width:70px;padding:10px 12px;}
+}
 .admin-analytics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:20px}.admin-analytics-grid .admin-storage-panel{margin:0}
 @media(max-width:760px){.admin-analytics-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){.skeleton-row>span,.skeleton-row i,.skeleton-row b{animation:none}}
 
