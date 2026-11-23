@@ -64,7 +64,9 @@
     try{
       const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:'popular'});
       const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Library request failed');
-      const data=await response.json(),incoming=Array.isArray(data.tracks)?data.tracks:[];
+      const data=await response.json();
+      if(nativeMode){await ensureFullLibrary();return;}
+      const incoming=Array.isArray(data.tracks)?data.tracks:[];
       if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
       if(!searchQuery){
         if(reset)tracks=incoming;else{const known=new Set(tracks.map(t=>String(t.id)));tracks.push(...incoming.filter(t=>!known.has(String(t.id))));}
