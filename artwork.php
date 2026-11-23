@@ -18,7 +18,7 @@ $size=filesize($file);
 if ($size===false || $size<1) { http_response_code(404); exit; }
 header('Content-Type: '.$mime);
 header('Content-Length: '.$size);
-header('Cache-Control: public, max-age=3600');
+header('Cache-Control: public, max-age=31536000, immutable');
 header('X-Content-Type-Options: nosniff');
 header('Content-Disposition: inline; filename="rivune-artwork-'.$id.'.'.pathinfo($file,PATHINFO_EXTENSION).'"');
 readfile($file);
