@@ -43,7 +43,7 @@ $base = 'admin-logs.php?event=' . rawurlencode($event) . '&status=' . rawurlenco
 <title>RIVUNE | Activity Logs</title>
 <link rel="icon" type="image/png" href="public/assets/rivune-logo.png">
 <link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=modular-theme-1">
+<link rel="stylesheet" href="assets/css/app.css?v=app-split-2">
 <style>
 .logs-wrap{width:min(1000px,calc(100% - 32px));margin:40px auto 70px}
 .logs-top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px}
