@@ -34,7 +34,7 @@ $adminBrandLabels = [
     </nav>
   </details>
   <nav class="rivune-admin-desktop-nav" aria-label="Admin navigation">
-    <div class="rivune-nav-group"><span class="rivune-nav-group-label">Songs</span><?php foreach (['song_upload','song_manage','artwork'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?></div>
+    <div class="rivune-nav-group"><span class="rivune-nav-group-label">Songs</span><?php foreach (['song_upload','song_manage','artwork','analytics'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?></div>
     <div class="rivune-nav-group"><span class="rivune-nav-group-label">System</span><?php foreach (['overview','integrity','logs','alerts','backups','maintenance','security'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?></div>
     <a href="./">Public site</a>
     <form method="post" action="admin.php" onsubmit="return confirm('Sign out of RIVUNE Admin?');"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button type="submit" class="rivune-nav-logout">Sign out</button></form>
