@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <title>Account Security | RIVUNE Admin</title>
 <link rel="icon" type="image/png" href="public/assets/rivune-logo.png">
 <link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=modular-theme-1">
+<link rel="stylesheet" href="assets/css/app.css?v=app-split-2">
 <body>
 <main class="admin-wrap">
 <?php $adminActivePage = 'security'; require __DIR__.'/lib/admin_navigation.php'; ?>
