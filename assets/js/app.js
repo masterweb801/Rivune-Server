@@ -1,7 +1,7 @@
 (() => {
   const audio=document.getElementById('audio'), list=document.getElementById('tracks');
   const search=document.getElementById('search');
-  let tracks=[], queue=[], current=-1, shuffled=false, pointerStart=null;
+  let tracks=[], displayTracks=[], queue=[], current=-1, shuffled=false, pointerStart=null;
   let nativeMode=false, nativePlaybackState=null;
   const $=id=>document.getElementById(id);
   const fmt=n=>Number.isFinite(n)&&n>0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
@@ -46,7 +46,7 @@
   let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',libraryTotal=0,fullLibraryLoaded=false;
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
-    const q=searchQuery.trim().toLowerCase(),shown=tracks.filter(t=>(t.title+' '+t.artist+' '+t.album).toLowerCase().includes(q));
+    const source=searchQuery?displayTracks:tracks,shown=source;
     $('count').textContent=(searchQuery?libraryTotal:libraryTotal)+' '+(libraryTotal===1?'track':'tracks');list.replaceChildren();
     if(!shown.length){const p=document.createElement('p');p.className='empty';p.textContent=searchQuery?'No tracks match your search.':(libraryTotal?'No songs loaded yet.':'The library is empty for now. Check back soon.');list.append(p);return;}
     shown.forEach(t=>{
@@ -60,13 +60,20 @@
   async function fetchPage({reset=false}={}){
     if(loadingPage||(!hasMore&&!reset&&page>1))return;
     loadingPage=true;$('load-more').hidden=true;
-    if(reset){page=1;hasMore=false;tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
+    if(reset){page=1;hasMore=false;displayTracks=[];if(!searchQuery)tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
     try{
       const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:'popular'});
       const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Library request failed');
       const data=await response.json(),incoming=Array.isArray(data.tracks)?data.tracks:[];
-      if(reset)tracks=incoming;else{const known=new Set(tracks.map(t=>String(t.id)));tracks.push(...incoming.filter(t=>!known.has(String(t.id))));}
-      libraryTotal=Number(data.pagination?.total??tracks.length);hasMore=!!data.pagination?.has_more;page+=1;fullLibraryLoaded=!hasMore;queue=[...tracks];render();
+      if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
+      if(!searchQuery){
+        if(reset)tracks=incoming;else{const known=new Set(tracks.map(t=>String(t.id)));tracks.push(...incoming.filter(t=>!known.has(String(t.id))));}
+        const activeId=queue[current]?.id==null?null:String(queue[current].id);
+        const queued=new Set(queue.map(t=>String(t.id)));
+        queue.push(...incoming.filter(t=>!queued.has(String(t.id))));
+        if(activeId!==null)current=queue.findIndex(t=>String(t.id)===activeId);
+      }
+      libraryTotal=Number(data.pagination?.total??displayTracks.length);hasMore=!!data.pagination?.has_more;page+=1;fullLibraryLoaded=!hasMore&&!searchQuery;render();
       $('library-status').textContent=hasMore?'Scroll to load more songs.':(libraryTotal+' songs loaded');$('load-more').hidden=!hasMore;
       if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
     }catch(error){if(reset){list.replaceChildren();const p=document.createElement('p');p.className='empty';p.textContent='Could not load the music library. Please refresh in a moment.';list.append(p);$('count').textContent='Unavailable';}$('library-status').textContent='Could not load more songs. Please try again.';$('load-more').hidden=false;}
@@ -75,7 +82,7 @@
   async function ensureFullLibrary(){
     if(fullLibraryLoaded)return;
     const response=await fetch('api.php',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Could not load full library');
-    const data=await response.json();tracks=Array.isArray(data.tracks)?data.tracks:[];queue=[...tracks];libraryTotal=tracks.length;hasMore=false;fullLibraryLoaded=true;render();
+    const data=await response.json();const activeId=queue[current]?.id==null?null:String(queue[current].id);tracks=Array.isArray(data.tracks)?data.tracks:[];queue=[...tracks];current=activeId===null?-1:queue.findIndex(t=>String(t.id)===activeId);displayTracks=tracks;libraryTotal=tracks.length;hasMore=false;fullLibraryLoaded=true;render();
     if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
   }
   function load(){fetchPage({reset:true});}
@@ -99,7 +106,7 @@
   function playTrack(t){
     recordPlay(t.id);
     if(shuffled){queue=[t,...shuffledCopy(tracks.filter(x=>x.id!==t.id))];current=0;}
-    else{queue=[...tracks];current=queue.findIndex(x=>x.id===t.id);}
+    else{queue=[...tracks];if(!queue.some(x=>String(x.id)===String(t.id)))queue.unshift(t);current=queue.findIndex(x=>String(x.id)===String(t.id));}
     if(nativeMode){
       nativePlaybackState={...(nativePlaybackState||{}),isPlaying:true,positionMs:0};
       sendNative('playTrack',{track:{...t},queueTrackIds:queue.map(x=>Number(x.id)),currentIndex:current});
