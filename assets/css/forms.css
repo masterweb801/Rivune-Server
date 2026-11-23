@@ -1,0 +1,22 @@
+/* Shared forms, action buttons and feedback states. */
+:root{--rivune-control-size:44px;}
+.form{display:grid;gap:14px;margin-top:20px}.form label{display:grid;gap:7px;color:var(--muted);font-size:12px}.form input{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--text);outline:none}.form input:focus{border-color:var(--accent)}.form small{font-size:10px;color:var(--muted)}.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.primary,.secondary,.danger{padding:11px 16px;border:0;border-radius:10px;font-size:12px;font-weight:750;cursor:pointer}.primary{background:var(--accent2);color:white}.secondary{background:var(--raised);color:var(--text)}.danger{background:var(--danger-soft);color:var(--danger)}.error,.success{padding:12px 14px;border-radius:10px;font-size:12px}.error{background:var(--danger-soft);color:var(--danger)}.success{background:var(--success-soft);color:var(--good)}
+.form input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.form select,.form textarea{
+  min-height:44px;
+  box-sizing:border-box;
+  -webkit-appearance:none;
+  appearance:none;
+  border-radius:10px;
+  font-size:16px;
+}
+.form input[type=file]{
+  width:100%;
+  min-width:0;
+  font-size:14px;
+  line-height:1.4;
+}
+.form input[type=checkbox],.form input[type=radio]{accent-color:var(--accent)}
+
+@media(max-width:900px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+@media(max-width:520px){.form-grid{grid-template-columns:minmax(0,1fr);}}
