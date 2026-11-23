@@ -83,6 +83,8 @@ function rivune_admin_diagnostics(PDO $pdo): array {
     $tables = $pdo->query('SHOW TABLES')->fetchAll(PDO::FETCH_NUM);
     $names = array_map(static fn($row)=>(string)$row[0], $tables);
     $checks[] = ['label'=>'Tracks table', 'ok'=>in_array('tracks',$names,true), 'detail'=>in_array('tracks',$names,true)?'Required table is present.':'Required tracks table was not found.'];
+    $throttleReady = in_array('admin_login_throttle', $names, true);
+    $checks[] = ['label'=>'Persistent admin login throttle', 'ok'=>$throttleReady, 'detail'=>$throttleReady?'Database-backed login throttling is available.':'Throttle table is not present; verify database CREATE/INSERT/UPDATE permissions. Until it is available, login protection falls back to the current PHP session.'];
   } catch (Throwable $e) {
     $checks[] = ['label'=>'Database tables', 'ok'=>false, 'detail'=>'Could not inspect required tables.'];
   }
