@@ -17,7 +17,7 @@ try {
       $candidate=$artworkDir.'/'.$id.'.'.$extension;
       if (is_file($candidate) && is_readable($candidate)) { $artworkFile=$candidate; break; }
     }
-    $row['artwork_url']=$artworkFile ? 'artwork.php?id='.$id.'&v='.(int)filemtime($artworkFile) : null;
+    $row['artwork_url']=$artworkFile ? 'artwork.php?id='.$id.'&v='.(int)filemtime($artworkFile).'-'.(int)filesize($artworkFile) : null;
     $tracks[]=$row;
   }
   echo json_encode(['tracks'=>$tracks], JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);
