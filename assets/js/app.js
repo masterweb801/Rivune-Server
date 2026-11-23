@@ -43,21 +43,42 @@
     catch(error){console.warn('RIVUNE native bridge message failed',error);return false;}
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
+  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',libraryTotal=0,fullLibraryLoaded=false;
+  function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
-    const q=search.value.trim().toLowerCase();
-    const shown=tracks.filter(t=>(t.title+' '+t.artist+' '+t.album).toLowerCase().includes(q));
-    $('count').textContent=tracks.length+' '+(tracks.length===1?'track':'tracks');list.replaceChildren();
-    if(!shown.length){const p=document.createElement('p');p.className='empty';p.textContent=tracks.length?'No tracks match your search.':'The library is empty for now. Check back soon.';list.append(p);return;}
+    const q=searchQuery.trim().toLowerCase(),shown=tracks.filter(t=>(t.title+' '+t.artist+' '+t.album).toLowerCase().includes(q));
+    $('count').textContent=(searchQuery?libraryTotal:libraryTotal)+' '+(libraryTotal===1?'track':'tracks');list.replaceChildren();
+    if(!shown.length){const p=document.createElement('p');p.className='empty';p.textContent=searchQuery?'No tracks match your search.':(libraryTotal?'No songs loaded yet.':'The library is empty for now. Check back soon.');list.append(p);return;}
     shown.forEach(t=>{
       const row=document.createElement('button');row.type='button';row.dataset.trackId=String(t.id);row.className='track'+(queue[current]?.id===t.id?' active':'');
       const art=document.createElement('span');art.className='track-art';setArtwork(art,t.artwork_url,(t.title||'Track')+' artwork');
-      const info=document.createElement('span');info.className='track-meta';
-      const title=document.createElement('strong');title.textContent=String(t.title||'Untitled');
+      const info=document.createElement('span');info.className='track-meta';const title=document.createElement('strong');title.textContent=String(t.title||'Untitled');
       const sub=document.createElement('small');sub.textContent=String(t.artist||'Unknown artist')+' · '+String(t.album||'Unknown album');
-      const play=document.createElement('span');play.className='track-play';play.textContent='▶';
-      info.append(title,sub);row.append(art,info,play);row.addEventListener('click',()=>playTrack(t));list.append(row);
+      const play=document.createElement('span');play.className='track-play';play.textContent='▶';info.append(title,sub);row.append(art,info,play);row.addEventListener('click',()=>playTrack(t));list.append(row);
     });
   }
+  async function fetchPage({reset=false}={}){
+    if(loadingPage||(!hasMore&&!reset&&page>1))return;
+    loadingPage=true;$('load-more').hidden=true;
+    if(reset){page=1;hasMore=false;tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
+    try{
+      const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:'popular'});
+      const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Library request failed');
+      const data=await response.json(),incoming=Array.isArray(data.tracks)?data.tracks:[];
+      if(reset)tracks=incoming;else{const known=new Set(tracks.map(t=>String(t.id)));tracks.push(...incoming.filter(t=>!known.has(String(t.id))));}
+      libraryTotal=Number(data.pagination?.total??tracks.length);hasMore=!!data.pagination?.has_more;page+=1;fullLibraryLoaded=!hasMore;queue=[...tracks];render();
+      $('library-status').textContent=hasMore?'Scroll to load more songs.':(libraryTotal+' songs loaded');$('load-more').hidden=!hasMore;
+      if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
+    }catch(error){if(reset){list.replaceChildren();const p=document.createElement('p');p.className='empty';p.textContent='Could not load the music library. Please refresh in a moment.';list.append(p);$('count').textContent='Unavailable';}$('library-status').textContent='Could not load more songs. Please try again.';$('load-more').hidden=false;}
+    finally{loadingPage=false;}
+  }
+  async function ensureFullLibrary(){
+    if(fullLibraryLoaded)return;
+    const response=await fetch('api.php',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Could not load full library');
+    const data=await response.json();tracks=Array.isArray(data.tracks)?data.tracks:[];queue=[...tracks];libraryTotal=tracks.length;hasMore=false;fullLibraryLoaded=true;render();
+    if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
+  }
+  function load(){fetchPage({reset:true});}
   function updateActiveTrack(){
     const activeId=queue[current]?String(queue[current].id):'';
     list.querySelectorAll('.track[data-track-id]').forEach(row=>row.classList.toggle('active',row.dataset.trackId===activeId));
@@ -74,7 +95,9 @@
     $('expanded-shuffle').setAttribute('aria-pressed',shuffled?'true':'false');
     updateActiveTrack();
   }
+  function recordPlay(trackId){if(!trackId)return;const body=new URLSearchParams({track_id:String(trackId)});fetch('play-event.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,keepalive:true}).catch(()=>{});}
   function playTrack(t){
+    recordPlay(t.id);
     if(shuffled){queue=[t,...shuffledCopy(tracks.filter(x=>x.id!==t.id))];current=0;}
     else{queue=[...tracks];current=queue.findIndex(x=>x.id===t.id);}
     if(nativeMode){
@@ -106,7 +129,8 @@
     const panel=$('expanded-player');panel.classList.toggle('open',open);
     panel.setAttribute('aria-hidden',open?'false':'true');document.body.classList.toggle('player-expanded',open);
   }
-  function toggleShuffle(){
+  async function toggleShuffle(){
+    if(!fullLibraryLoaded){try{await ensureFullLibrary();}catch(error){console.warn('Full-library shuffle unavailable',error);}}
     shuffled=!shuffled;const now=queue[current]||null;
     if(shuffled){const rest=tracks.filter(t=>!now||t.id!==now.id);
       for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}
@@ -115,7 +139,8 @@
     if(nativeMode){sendNative('shuffleChanged',{enabled:shuffled});publishQueue();}
     sync();
   }
-  function playRandom(){
+  async function playRandom(){
+    if(!fullLibraryLoaded){try{await ensureFullLibrary();}catch(error){return;}}
     if(!tracks.length)return;
     let choices=tracks;if(tracks.length>1&&queue[current])choices=tracks.filter(t=>t.id!==queue[current].id);
     playTrack(choices[Math.floor(Math.random()*choices.length)]);
@@ -143,6 +168,7 @@
   }
   function onNativeStateChanged(input){
     if(!nativeMode)return false;
+    const previousNativeTrackId=queue[current]?.id==null?null:String(queue[current].id);
     let state=input;
     if(typeof input==='string'){try{state=JSON.parse(input);}catch(_){return false;}}
     if(!state||typeof state!=='object')return false;
@@ -164,6 +190,8 @@
       durationMs:Math.max(0,Number(state.durationMs)||0),
       volume:Math.min(1,Math.max(0,Number(state.volume??0.8)))
     };
+    const activeNativeTrackId=queue[current]?.id==null?null:String(queue[current].id);
+    if(nativePlaybackState.isPlaying&&activeNativeTrackId&&activeNativeTrackId!==previousNativeTrackId)recordPlay(activeNativeTrackId);
     $('expanded-volume').value=String(nativePlaybackState.volume);sync();updateTimeline();return true;
   }
   function onNativeError(input){
@@ -178,18 +206,10 @@
     onNativeStateChanged,
     onNativeError
   };
-  async function load(){
-    try{
-      const r=await fetch('api.php',{headers:{Accept:'application/json'}});
-      if(!r.ok)throw new Error('Library request failed');
-      const data=await r.json();tracks=Array.isArray(data.tracks)?data.tracks:[];queue=[...tracks];render();
-      if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(t=>({...t}))});publishQueue();}
-    }catch(e){
-      list.replaceChildren();const p=document.createElement('p');p.className='empty';
-      p.textContent='Could not load the music library. Please refresh in a moment.';list.append(p);$('count').textContent='Unavailable';
-    }
-  }
-  search.addEventListener('input',render);
+  search.addEventListener('input',()=>{searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),250);});
+  $('load-more').addEventListener('click',()=>fetchPage());
+  const sentinel=$('load-more-sentinel');
+  if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)&&hasMore&&!loadingPage)fetchPage();},{rootMargin:'700px 0px'});observer.observe(sentinel);}
   $('toggle').addEventListener('click',togglePlayback);$('expanded-toggle').addEventListener('click',togglePlayback);
   $('next').addEventListener('click',next);$('expanded-next').addEventListener('click',next);
   $('prev').addEventListener('click',previous);$('expanded-prev').addEventListener('click',previous);
