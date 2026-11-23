@@ -12,7 +12,7 @@ try {
   $offset = ($page - 1) * $limit;
   $search = trim((string)($_GET['q'] ?? ''));
   $sort = (string)($_GET['sort'] ?? 'popular');
-  $hasPlayStats = (bool)$pdo->query("SHOW TABLES LIKE 'track_plays'")->fetchColumn();
+  $hasPlayStats = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='track_plays'")->fetchColumn() > 0;
   $playCountExpr = $hasPlayStats ? 'COALESCE(tp.play_count,0)' : '0';
   $playJoin = $hasPlayStats ? ' LEFT JOIN track_plays tp ON tp.track_id=t.id' : '';
   $order = $sort === 'newest' ? 't.id DESC' : $playCountExpr.' DESC, t.title COLLATE utf8mb4_unicode_ci, t.id DESC';
