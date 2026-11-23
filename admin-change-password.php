@@ -70,11 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Account Security | RIVUNE Admin</title>
 <link rel="icon" type="image/png" href="public/assets/rivune-logo.png">
-<link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=app-core-4">
+<link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2">
+<link rel="stylesheet" href="assets/css/app.css?v=app-core-5">
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
-<link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1">
+<link rel="stylesheet" href="assets/css/admin.css?v=admin-module-2">
 <body>
 <main class="admin-wrap">
 <?php $adminActivePage = 'security'; require __DIR__.'/lib/admin_navigation.php'; ?>
