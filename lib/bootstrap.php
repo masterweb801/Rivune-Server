@@ -66,4 +66,22 @@ function require_admin(): void {
   $_SESSION['admin_authenticated_at'] = $authenticatedAt;
   $_SESSION['admin_last_activity'] = $now;
 }
+function rivune_music_storage_path(string $storedName): ?string {
+  // Uploads generate exactly 40 lowercase hexadecimal characters plus .mp3.
+  // Enforce that invariant before any database value becomes a filesystem path.
+  if (!preg_match('/^[a-f0-9]{40}\\.mp3$/D', $storedName)) return null;
+  $directory = __DIR__ . '/../storage/music';
+  $base = realpath($directory);
+  if ($base === false || !is_dir($base)) return null;
+  $candidate = $base . DIRECTORY_SEPARATOR . $storedName;
+  if (is_link($candidate)) return null;
+  $resolved = realpath($candidate);
+  if ($resolved !== false) {
+    $prefix = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+    if (strpos($resolved, $prefix) !== 0 || !is_file($resolved)) return null;
+    return $resolved;
+  }
+  // A missing but syntactically valid file may still be deleted from its DB row.
+  return $candidate;
+}
 function h(string $v): string { return htmlspecialchars($v, ENT_QUOTES|ENT_SUBSTITUTE, 'UTF-8'); }
