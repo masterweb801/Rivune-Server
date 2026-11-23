@@ -18,6 +18,11 @@
     }else{const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);}
   }
 
+  function shuffledCopy(items){
+    const result=items.slice();
+    for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]];}
+    return result;
+  }
   function snapshot(){
     const t=queue[current]||null;
     return {
@@ -70,7 +75,7 @@
     updateActiveTrack();
   }
   function playTrack(t){
-    if(shuffled){queue=[t,...tracks.filter(x=>x.id!==t.id).sort(()=>Math.random()-.5)];current=0;}
+    if(shuffled){queue=[t,...shuffledCopy(tracks.filter(x=>x.id!==t.id))];current=0;}
     else{queue=[...tracks];current=queue.findIndex(x=>x.id===t.id);}
     if(nativeMode){
       nativePlaybackState={...(nativePlaybackState||{}),isPlaying:true,positionMs:0};
