@@ -2,7 +2,10 @@
 // Shared authenticated admin navigation. Set $adminActivePage before including.
 $adminActivePage = isset($adminActivePage) ? (string)$adminActivePage : 'overview';
 $adminNavItems = [
-  'overview' => ['Overview & Music', 'admin.php'],
+  'overview' => ['System overview', 'admin.php'],
+  'song_upload' => ['Upload songs', 'admin-upload.php'],
+  'song_manage' => ['Manage songs', 'admin-songs.php'],
+  'artwork' => ['Artwork maintenance', 'admin-extract-artwork.php'],
   'integrity' => ['File integrity', 'admin-integrity.php'],
   'logs' => ['Activity logs', 'admin-logs.php'],
   'alerts' => ['Alerts', 'admin-alerts.php'],
@@ -11,7 +14,7 @@ $adminNavItems = [
   'security' => ['Change password', 'admin-change-password.php'],
 ];
 $adminBrandLabels = [
-  'overview'=>'ADMIN STUDIO','integrity'=>'FILE INTEGRITY','logs'=>'ACTIVITY LOGS',
+  'overview'=>'ADMIN STUDIO','song_upload'=>'SONG UPLOAD','song_manage'=>'SONG MANAGEMENT','artwork'=>'ARTWORK MAINTENANCE','integrity'=>'FILE INTEGRITY','logs'=>'ACTIVITY LOGS',
   'alerts'=>'SYSTEM ALERTS','backups'=>'BACKUP & EXPORT','maintenance'=>'MAINTENANCE CONTROL','security'=>'ACCOUNT SECURITY'
 ];
 ?>
@@ -21,13 +24,17 @@ $adminBrandLabels = [
   <details class="rivune-admin-mobile-nav">
     <summary aria-label="Open admin navigation"><span class="rivune-menu-icon">☰</span><span>Menu</span></summary>
     <nav class="rivune-admin-menu" aria-label="Admin navigation">
-      <?php foreach ($adminNavItems as $key => $item): ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
+      <span class="rivune-nav-group-label">Songs</span>
+      <?php foreach (['song_upload','song_manage','artwork'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
+      <span class="rivune-nav-group-label">System</span>
+      <?php foreach (['overview','integrity','logs','alerts','backups','maintenance','security'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
       <a href="./">← Public site</a>
       <form method="post" action="admin.php" onsubmit="return confirm('Sign out of RIVUNE Admin?');"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button type="submit" class="rivune-nav-logout">Sign out</button></form>
     </nav>
   </details>
   <nav class="rivune-admin-desktop-nav" aria-label="Admin navigation">
-    <?php foreach ($adminNavItems as $key => $item): ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?>
+    <div class="rivune-nav-group"><span class="rivune-nav-group-label">Songs</span><?php foreach (['song_upload','song_manage','artwork'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?></div>
+    <div class="rivune-nav-group"><span class="rivune-nav-group-label">System</span><?php foreach (['overview','integrity','logs','alerts','backups','maintenance','security'] as $key): $item=$adminNavItems[$key]; ?><a href="<?= h($item[1]) ?>"<?= $adminActivePage === $key ? ' class="is-active" aria-current="page"' : '' ?>><?= h($item[0]) ?></a><?php endforeach; ?></div>
     <a href="./">Public site</a>
     <form method="post" action="admin.php" onsubmit="return confirm('Sign out of RIVUNE Admin?');"><input type="hidden" name="csrf" value="<?= h(csrf_token()) ?>"><input type="hidden" name="action" value="logout"><button type="submit" class="rivune-nav-logout">Sign out</button></form>
   </nav>
