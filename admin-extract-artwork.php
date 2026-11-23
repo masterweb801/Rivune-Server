@@ -57,7 +57,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 $done=$offset >= $total || ($_SERVER['REQUEST_METHOD']==='POST' && $processed===0);
 ?><!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Extract embedded artwork | RIVUNE Admin</title><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-1">
-<link rel="stylesheet" href="assets/css/app.css?v=admin-split-3">
+<link rel="stylesheet" href="assets/css/app.css?v=app-core-4">
+<link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
+<link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/admin.css?v=admin-module-1"></head>
 <body><main class="admin-wrap"><?php $adminActivePage='artwork'; require __DIR__.'/lib/admin_navigation.php'; ?>
 <section class="panel"><p class="eyebrow">MUSIC LIBRARY</p><h1><?= $mode==='optimize'?'Optimize existing covers':'Extract embedded covers' ?></h1>
