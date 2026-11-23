@@ -203,7 +203,28 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     header('Location: admin.php'); exit;
   } elseif ($action==='delete') {
     require_admin(); $id=filter_var($_POST['id']??null,FILTER_VALIDATE_INT);
-    if ($id) { $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?'); $q->execute([$id]); $track=$q->fetch(); if ($track) { $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]); $path=__DIR__.'/storage/music/'.$track['stored_name']; if (is_file($path)) unlink($path); foreach (['jpg','png','webp'] as $artExt) { $artPath=__DIR__.'/storage/artwork/'.(int)$id.'.'.$artExt; if (is_file($artPath)) @unlink($artPath); } rivune_admin_log($pdo, 'delete', 'success', 'Deleted track record #'.(int)$id.'.'); $notice='Track deleted.'; } }
+    if ($id) {
+      $q=$pdo->prepare('SELECT stored_name FROM tracks WHERE id=?');
+      $q->execute([$id]);
+      $track=$q->fetch();
+      if ($track) {
+        $path=rivune_music_storage_path((string)$track['stored_name']);
+        if ($path === null) {
+          $error='This track has an invalid stored filename. Its record and files were left untouched; run the integrity scanner.';
+        } else {
+          $pdo->prepare('DELETE FROM tracks WHERE id=?')->execute([$id]);
+          if (is_file($path) && !@unlink($path)) {
+            rivune_admin_log($pdo, 'delete', 'warning', 'Deleted track record #'.(int)$id.' but its validated MP3 file could not be removed.');
+          }
+          foreach (['jpg','png','webp'] as $artExt) {
+            $artPath=__DIR__.'/storage/artwork/'.(int)$id.'.'.$artExt;
+            if (is_file($artPath) && !is_link($artPath)) @unlink($artPath);
+          }
+          rivune_admin_log($pdo, 'delete', 'success', 'Deleted track record #'.(int)$id.'.');
+          $notice='Track deleted.';
+        }
+      }
+    }
   }
 }
 if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && ($_POST['return_to'] ?? '') === 'admin-songs.php') {
