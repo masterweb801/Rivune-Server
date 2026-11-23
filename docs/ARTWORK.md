@@ -31,6 +31,7 @@ Upload/replace these files from the `dev` branch:
 - `admin-artwork.php` (new)
 - `admin-extract-artwork.php` (new)
 - `lib/mp3_artwork.php` (new)
+- `lib/admin_logs.php` (replace; records artwork operations)
 - `artwork.php` (new)
 
 The first artwork upload creates `storage/artwork/` automatically. If your host does not permit PHP to create it, create that folder manually under `storage/` and set permissions consistent with the existing `storage/music/` folder.
@@ -40,10 +41,10 @@ Do not overwrite or delete `storage/config.php`, `storage/music/`, existing artw
 ## Manual test
 
 1. Upload an MP3 that has embedded album art in its ID3 tag.
-2. For older uploads, open Admin → Song Deletion Centre → Extract embedded covers from existing songs and continue the scan until it completes.
 2. Confirm the uploaded track receives artwork automatically in the library, mini-player, and expanded player.
-3. Upload an MP3 with no embedded cover and confirm the fallback appears.
-4. Optionally open the track's Artwork admin page to apply a manual override.
-5. Confirm playback, seek, next/previous, and the Android bridge still receive the same track/queue fields plus the optional artwork URL.
+3. For older uploads, open Admin → Song Deletion Centre → Extract embedded covers from existing songs and continue the scan until it completes.
+4. Upload an MP3 with no embedded cover and confirm the fallback appears.
+5. Optionally open the track's Artwork admin page to apply a manual override.
+6. Confirm playback, seek, next/previous, and the Android bridge still receive the same track/queue fields plus the optional artwork URL.
 
 Source implementation only; live InfinityFree and Android-device tests must still be performed after deployment.
