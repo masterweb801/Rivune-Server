@@ -99,10 +99,8 @@ function rivune_extract_mp3_metadata(string $path): array {
     $payload = substr($body, $offset + $frameHeader, $size);
     $offset += $frameHeader + $size;
     if (!isset($map[$frameId]) || isset($found[$map[$frameId]])) continue;
-    // ID3v2.3/v2.4 frame flags are in the final two bytes of the frame header.
-    if ($major !== 2 && $size >= 1 && ($payload[0] ?? '') === '') continue;
     $value = rivune_id3_text_value($payload);
-    if ($value !== '') $found[$map[$frameId]] = mb_substr($value, 0, 190, 'UTF-8') ?: substr($value, 0, 190);
+    if ($value !== '') $found[$map[$frameId]] = function_exists('mb_substr') ? mb_substr($value, 0, 190, 'UTF-8') : substr($value, 0, 190);
   }
   return $found;
 }
