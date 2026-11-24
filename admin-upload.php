@@ -20,11 +20,25 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
  button.addEventListener('pointerdown',unlock);button.addEventListener('touchstart',unlock,{passive:true});
  function chime(){if(!audioContext||audioContext.state!=='running')return;try{const now=audioContext.currentTime;[660,880,1100].forEach((f,i)=>{const o=audioContext.createOscillator(),g=audioContext.createGain(),t=now+i*.15;o.type='sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.14,t+.025);g.gain.exponentialRampToValueAtTime(.0001,t+.23);o.connect(g);g.connect(audioContext.destination);o.start(t);o.stop(t+.25);});}catch(e){}}
  form.addEventListener('submit',function(event){event.preventDefault();if(!form.querySelector('[type=file]').files.length)return;unlock();button.disabled=true;button.textContent='Uploading…';message.textContent='';wrap.style.display='block';progress.value=0;label.textContent='0%';status.textContent='Starting upload…';
- const xhr=new XMLHttpRequest();xhr.open('POST',form.action,true);xhr.withCredentials=true;
+ const xhr=new XMLHttpRequest();xhr.open('POST',form.action,true);xhr.withCredentials=true;xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
  xhr.upload.addEventListener('progress',e=>{if(!e.lengthComputable){status.textContent='Uploading files…';return;}const p=Math.round(e.loaded/e.total*100);progress.value=p;label.textContent=p+'%';status.textContent=p>=100?'Saving tracks…':'Uploading files…';});
  xhr.addEventListener('load',()=>{let result;try{result=JSON.parse(xhr.responseText);}catch(e){finishError();return;}if(xhr.status<200||xhr.status>=300){finishError();return;}progress.value=100;label.textContent='100%';const text=[result.notice,result.error].filter(Boolean).join(' ');const node=document.createElement('p');node.className=result.error?'error':'success';node.textContent=text||'Upload request completed.';message.replaceChildren(node);if(result.saved>0)chime();if(result.ok)form.reset();status.textContent=result.saved>0?'Upload complete.':'Upload request finished.';button.disabled=false;button.textContent='Upload selected tracks';});
  xhr.addEventListener('error',finishError);xhr.addEventListener('abort',finishError);xhr.send(new FormData(form));
- function finishError(){const node=document.createElement('p');node.className='error';node.textContent='Upload could not be completed. Check your connection and hosting upload limits, then try again.';message.replaceChildren(node);status.textContent='Upload failed.';button.disabled=false;button.textContent='Upload selected tracks';}
+ function finishError(){
+   const node=document.createElement('p');node.className='error';
+   let detail='The server did not return a valid upload response.';
+   if(xhr.status) detail='Server response: HTTP '+xhr.status+'.';
+   const raw=(xhr.responseText||'').replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,' ').replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi,' ');
+   const holder=document.createElement('div');holder.innerHTML=raw;
+   const body=(holder.textContent||holder.innerText||'').replace(/\\s+/g,' ').trim().slice(0,240);
+   if(body) detail+=' '+body;
+   else if(xhr.status===413) detail+=' The hosting server rejected the request as too large.';
+   else if(xhr.status===403) detail+=' The hosting security layer may have blocked this request.';
+   else if(xhr.status===0) detail='The connection was interrupted before the server returned a response.';
+   node.textContent='Upload failed. '+detail;
+   message.replaceChildren(node);status.textContent='Upload failed.';
+   button.disabled=false;button.textContent='Upload selected tracks';
+  }
  });
 })();
 </script></body></html>
