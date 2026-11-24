@@ -22,55 +22,66 @@ themeToggle.addEventListener('click', () => {
   document.querySelector('meta[name="theme-color"]').content = root.dataset.theme === 'light' ? '#F7F5FC' : '#11111D';
   syncThemeButton();
 });
-// Keep the public navigation and library search out of the way while browsing.
-// Scrolling upward reveals both again; focusing search temporarily locks them open.
-let previousScrollY = window.scrollY;
+// The public header and search form one temporary overlay.
+// They are hidden while scrolling down and revealed together while scrolling up.
+const topbarEl = document.querySelector('.topbar');
+const searchEl = document.querySelector('#search');
+const scrollHeader = document.createElement('div');
+scrollHeader.className = 'scroll-header';
+scrollHeader.setAttribute('role', 'region');
+scrollHeader.setAttribute('aria-label', 'Navigation and music search');
+document.body.prepend(scrollHeader);
+scrollHeader.append(topbarEl, searchEl);
+
+let previousScrollY = Math.max(0, window.scrollY || 0);
 let scrollIntent = 0;
 let scrollFrame = false;
-const scrollDirectionThreshold = 5;
+const scrollDirectionThreshold = 4;
+
 function updateScrollNavigation() {
-  const currentY = Math.max(0, window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0);
+  const currentY = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0);
   const delta = currentY - previousScrollY;
   previousScrollY = currentY;
 
-  if (document.querySelector('.player')?.classList.contains('expanded') ||
-      document.activeElement === searchEl) {
+  if (document.querySelector('.player')?.classList.contains('expanded')) {
+    document.body.classList.add('nav-hidden');
+    scrollIntent = 0;
+    scrollFrame = false;
+    return;
+  }
+
+  if (currentY <= 20) {
     document.body.classList.remove('nav-hidden');
     scrollIntent = 0;
     scrollFrame = false;
     return;
   }
 
-  if (currentY <= 24) {
-    document.body.classList.remove('nav-hidden');
-    scrollIntent = 0;
-    scrollFrame = false;
-    return;
-  }
-
-  if (Math.abs(delta) >= 1) {
+  if (delta !== 0) {
     const direction = Math.sign(delta);
-    if (scrollIntent && Math.sign(scrollIntent) !== direction) scrollIntent = 0;
+    if (scrollIntent !== 0 && Math.sign(scrollIntent) !== direction) scrollIntent = 0;
     scrollIntent += delta;
 
-    if (scrollIntent > scrollDirectionThreshold) {
+    if (scrollIntent >= scrollDirectionThreshold) {
       document.body.classList.add('nav-hidden');
       scrollIntent = 0;
-    } else if (scrollIntent < -scrollDirectionThreshold) {
+    } else if (scrollIntent <= -scrollDirectionThreshold) {
       document.body.classList.remove('nav-hidden');
       scrollIntent = 0;
     }
   }
   scrollFrame = false;
 }
+
 window.addEventListener('scroll', () => {
   if (scrollFrame) return;
   scrollFrame = true;
   window.requestAnimationFrame(updateScrollNavigation);
 }, { passive: true });
+
 searchEl.addEventListener('focus', () => document.body.classList.remove('nav-hidden'));
 searchEl.addEventListener('blur', () => {
-  previousScrollY = window.scrollY;
+  previousScrollY = Math.max(0, window.scrollY || 0);
   scrollIntent = 0;
 });
 
