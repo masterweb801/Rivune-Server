@@ -13,7 +13,7 @@ rivune_maintenance_enforce($pdo, 'html');
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/library.css?v=library-1">
-<link rel="stylesheet" href="assets/css/player.css?v=player-nav-lightfix-1">
+<link rel="stylesheet" href="assets/css/player.css?v=player-header-controls-2">
 </head><body>
 <header class="top"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><button id="random-play" class="random-btn" type="button" aria-label="Play a random song">⚄ <span>Random</span></button><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme">◐</button></div></header>
 <main class="wrap">
