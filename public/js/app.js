@@ -27,9 +27,9 @@ themeToggle.addEventListener('click', () => {
 let previousScrollY = window.scrollY;
 let scrollIntent = 0;
 let scrollFrame = false;
-const scrollDirectionThreshold = 9;
+const scrollDirectionThreshold = 5;
 function updateScrollNavigation() {
-  const currentY = Math.max(0, window.scrollY);
+  const currentY = Math.max(0, window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0);
   const delta = currentY - previousScrollY;
   previousScrollY = currentY;
 
