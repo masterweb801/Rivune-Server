@@ -64,3 +64,15 @@ html[data-theme=light]{
 html[data-theme=light]{
   --shadow-soft:0 8px 28px rgba(48,35,75,.08);
 }
+
+/* RIVUNE signature navigation palette. */
+:root{
+  --nav-bg:#1b1530;
+  --nav-border:rgba(167,139,250,.28);
+  --nav-glow:rgba(121,85,220,.13);
+}
+html[data-theme=light]{
+  --nav-bg:#eee8ff;
+  --nav-border:rgba(104,68,197,.22);
+  --nav-glow:rgba(121,85,220,.10);
+}
