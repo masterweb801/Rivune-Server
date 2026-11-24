@@ -16,7 +16,20 @@
   searchSpacer.setAttribute('aria-hidden','true');
   publicSearch.before(searchSpacer);
   document.body.prepend(headerOverlay);
-  headerOverlay.append(publicTop,publicSearch);
+  headerOverlay.append(publicTop);
+
+  // Keep search in its natural library position at the top of the page.
+  // Only bring the real search field into the floating header while scrolling up.
+  let searchInOverlay=false;
+  function moveSearchToOverlay(visible){
+    if(visible&&!searchInOverlay){
+      headerOverlay.append(publicSearch);
+      searchInOverlay=true;
+    }else if(!visible&&searchInOverlay){
+      searchSpacer.after(publicSearch);
+      searchInOverlay=false;
+    }
+  }
 
   let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
   let directionTravel=0;
@@ -27,11 +40,13 @@
     previousPageY=currentPageY;
     if(document.body.classList.contains('player-expanded')){
       document.body.classList.add('nav-hidden');
+      moveSearchToOverlay(false);
       directionTravel=0;
       return;
     }
     if(currentPageY<=20){
       document.body.classList.remove('nav-hidden');
+      moveSearchToOverlay(false);
       directionTravel=0;
       return;
     }
@@ -39,8 +54,10 @@
     directionTravel= Math.sign(directionTravel)===Math.sign(delta) ? directionTravel+delta : delta;
     if(directionTravel>=directionThreshold){
       document.body.classList.add('nav-hidden');
+      moveSearchToOverlay(false);
       directionTravel=0;
     }else if(directionTravel<=-directionThreshold){
+      moveSearchToOverlay(true);
       document.body.classList.remove('nav-hidden');
       directionTravel=0;
     }
