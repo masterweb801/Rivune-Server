@@ -28,9 +28,9 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    const node=document.createElement('p');node.className='error';
    let detail='The server did not return a valid upload response.';
    if(xhr.status) detail='Server response: HTTP '+xhr.status+'.';
-   const raw=(xhr.responseText||'').replace(/<script\\b[^>]*>[\\s\\S]*?<\\/script>/gi,' ').replace(/<style\\b[^>]*>[\\s\\S]*?<\\/style>/gi,' ');
-   const holder=document.createElement('div');holder.innerHTML=raw;
-   const body=(holder.textContent||holder.innerText||'').replace(/\\s+/g,' ').trim().slice(0,240);
+   const parsed=new DOMParser().parseFromString(xhr.responseText||'','text/html');
+   parsed.querySelectorAll('script,style').forEach(el=>el.remove());
+   const body=(parsed.body.textContent||'').replace(/\\s+/g,' ').trim().slice(0,240);
    if(body) detail+=' '+body;
    else if(xhr.status===413) detail+=' The hosting server rejected the request as too large.';
    else if(xhr.status===403) detail+=' The hosting security layer may have blocked this request.';
