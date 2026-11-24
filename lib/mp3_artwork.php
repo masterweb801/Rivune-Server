@@ -93,7 +93,7 @@ function rivune_extract_mp3_artwork(string $path): ?array {
     $allowed=['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
     if (!$info || !isset($allowed[$mime]) || $info['mime']!==$mime) continue;
     $width=(int)$info[0]; $height=(int)$info[1];
-    if ($width<1 || $height<1 || $width>6000 || $height>6000 || $width*$height>24000000) continue;
+    if ($width<1 || $height<1 || $width>5000 || $height>5000 || $width*$height>8000000) continue;
     $validArtwork=['extension'=>$allowed[$mime],'data'=>$image];
     if ($pictureType===3) return $validArtwork; // Prefer the ID3 front-cover frame.
     if (!isset($fallbackArtwork)) $fallbackArtwork=$validArtwork;
@@ -111,7 +111,7 @@ function rivune_optimize_artwork(array $artwork): ?array {
   $data=$artwork['data']??null;
   if (!in_array($extension,['jpg','png','webp'],true) || !is_string($data) || $data==='' || strlen($data)>5*1024*1024) return null;
   $info=@getimagesizefromstring($data);
-  if (!$info || (int)$info[0]<1 || (int)$info[1]<1 || (int)$info[0]>6000 || (int)$info[1]>6000 || (int)$info[0]*(int)$info[1]>24000000) return null;
+  if (!$info || (int)$info[0]<1 || (int)$info[1]<1 || (int)$info[0]>5000 || (int)$info[1]>5000 || (int)$info[0]*(int)$info[1]>8000000) return null;
   if (!function_exists('imagecreatefromstring')) return $artwork;
   $image=@imagecreatefromstring($data);
   if (!$image) return $artwork;
