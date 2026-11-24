@@ -36,7 +36,7 @@ $lines = array_slice($lines, -80);
     button.disabled = true;
     output.textContent = 'Testing the upload endpoint…';
     const data = new FormData();
-    data.append('csrf', "" || '');
+    data.append('csrf', <?= json_encode(csrf_token()) ?>);
     data.append('action', 'upload');
     data.append('ajax_upload', '1');
     try {
