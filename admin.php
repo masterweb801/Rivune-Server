@@ -1,5 +1,12 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/lib/upload_diagnostics.php';
+$earlyAjaxUpload = (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') && ((string)($_GET['ajax_upload'] ?? '') === '1' || (string)($_POST['ajax_upload'] ?? '') === '1');
+$earlyUploadRequestId = '';
+if ($earlyAjaxUpload) {
+  try { $earlyUploadRequestId = bin2hex(random_bytes(6)); } catch (Throwable $e) { $earlyUploadRequestId = substr(sha1(uniqid('', true)), 0, 12); }
+  rivune_upload_diag($earlyUploadRequestId, 'script_entered', ['content_length'=>(int)($_SERVER['CONTENT_LENGTH'] ?? 0), 'max_input_time'=>ini_get('max_input_time'), 'max_execution_time'=>ini_get('max_execution_time'), 'memory_limit'=>ini_get('memory_limit')]);
+}
 require __DIR__.'/lib/bootstrap.php';
 require_once __DIR__.'/lib/upload_limits.php';
 require_once __DIR__.'/lib/admin_center.php';
@@ -64,12 +71,12 @@ if ($ajaxUploadRequest) {
   // web server to close the connection with an empty/partial response.
   if (!headers_sent()) { @ini_set('display_errors', '0'); }
   ob_start();
-  $uploadRequestId = bin2hex(random_bytes(6));
+  $uploadRequestId = $earlyUploadRequestId !== '' ? $earlyUploadRequestId : bin2hex(random_bytes(6));
   $uploadStartedAt = microtime(true);
-  error_log('[RIVUNE upload '.$uploadRequestId.'] started; content_length='.(int)($_SERVER['CONTENT_LENGTH'] ?? 0).'; upload_max_filesize='.ini_get('upload_max_filesize').'; post_max_size='.ini_get('post_max_size').'; memory_limit='.ini_get('memory_limit').'; max_execution_time='.ini_get('max_execution_time'));
+  rivune_upload_diag($uploadRequestId, 'bootstrap_and_includes_complete', ['upload_max_filesize'=>ini_get('upload_max_filesize'), 'post_max_size'=>ini_get('post_max_size'), 'max_input_time'=>ini_get('max_input_time')]);
   @set_time_limit(180);
   set_exception_handler(static function (Throwable $exception) use ($uploadRequestId, $uploadStartedAt): void {
-    error_log('[RIVUNE upload '.$uploadRequestId.'] uncaught exception after '.round(microtime(true)-$uploadStartedAt,2).'s: '.get_class($exception).': '.$exception->getMessage().' in '.$exception->getFile().':'.$exception->getLine());
+    rivune_upload_diag($uploadRequestId, 'uncaught_exception', ['elapsed_seconds'=>round(microtime(true)-$uploadStartedAt,2), 'class'=>get_class($exception), 'message'=>$exception->getMessage(), 'line'=>$exception->getLine()]);
     while (ob_get_level() > 0) { @ob_end_clean(); }
     if (!headers_sent()) {
       http_response_code(500);
@@ -82,7 +89,7 @@ if ($ajaxUploadRequest) {
     $lastError = error_get_last();
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
     if (!$lastError || !in_array($lastError['type'], $fatalTypes, true)) return;
-    error_log('[RIVUNE upload '.$uploadRequestId.'] fatal after '.round(microtime(true)-$uploadStartedAt,2).'s: '.$lastError['message'].' in '.$lastError['file'].':'.$lastError['line']);
+    rivune_upload_diag($uploadRequestId, 'fatal_error', ['elapsed_seconds'=>round(microtime(true)-$uploadStartedAt,2), 'message'=>$lastError['message'], 'line'=>$lastError['line']]);
     while (ob_get_level() > 0) { @ob_end_clean(); }
     if (!headers_sent()) {
       http_response_code(500);
@@ -96,6 +103,7 @@ if ($ajaxUploadRequest) {
 // before CSRF parsing so the AJAX client receives a useful JSON response.
 if ($ajaxUploadRequest) {
   require_admin();
+  rivune_upload_diag($uploadRequestId, 'ajax_authentication_passed');
   $requestBytes = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
   $postLimitBytes = rivune_ini_size_bytes(ini_get('post_max_size'));
   if ($postLimitBytes > 0 && $requestBytes > $postLimitBytes) {
@@ -134,12 +142,16 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   } elseif ($action==='logout') { require_admin(); rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
   elseif ($action==='upload') {
     require_admin();
+    rivune_upload_diag($uploadRequestId, 'csrf_and_admin_checks_passed');
     // Authentication and CSRF checks are complete. Release PHP's per-session
     // lock before hashing files, moving uploads, and waiting on MySQL so other
     // admin requests cannot queue behind this potentially slow request.
     if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
+    rivune_upload_diag($uploadRequestId, 'session_released');
     rivune_processing_ensure_schema($pdo);
+    rivune_upload_diag($uploadRequestId, 'processing_queue_schema_ready');
     $batch=$_FILES['mp3']??null;
+    rivune_upload_diag($uploadRequestId, 'files_parsed', ['file_count'=>is_array($batch['name'] ?? null) ? count($batch['name']) : 0, 'total_file_bytes'=>is_array($batch['size'] ?? null) ? array_sum(array_map('intval', $batch['size'])) : 0]);
     if (!$batch || !isset($batch['name']) || !is_array($batch['name'])) {
       $error='Choose one or more MP3 files.';
     } else {
@@ -174,7 +186,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $failed[]=$name.': file does not contain a valid MP3 audio frame'; continue;
           }
           // Artwork and metadata are intentionally deferred to the background queue.
-          error_log('[RIVUNE upload '.$uploadRequestId.'] MP3 validation passed: '.basename($name));
+          rivune_upload_diag($uploadRequestId, 'mp3_validation_passed', ['file_index'=>$i+1, 'file_bytes'=>(int)$batch['size'][$i]]);
           $contentHash=hash_file('sha256',$tmp);
           if ($contentHash===false) {
             $failed[]=$name.': could not calculate file hash'; continue;
@@ -183,7 +195,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           // held until the duplicate check and database insert have completed.
           // Fail closed if MySQL named locks are unavailable: accepting the file
           // without a lock would reintroduce the duplicate-upload race.
-          error_log('[RIVUNE upload '.$uploadRequestId.'] SHA-256 calculated: '.basename($name));
+          rivune_upload_diag($uploadRequestId, 'sha256_calculated', ['file_index'=>$i+1]);
           $uploadLock = 'rivune_upload_' . substr($contentHash, 0, 50);
           $lockAcquired = false;
           try {
@@ -223,7 +235,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
               $queueInsert->execute([$trackId]);
               $pdo->commit();
               $saved++;
-              error_log('[RIVUNE upload '.$uploadRequestId.'] database save completed: '.basename($name).' track_id='.$trackId);
+              rivune_upload_diag($uploadRequestId, 'database_save_completed', ['file_index'=>$i+1, 'track_id'=>$trackId]);
             } catch (Throwable $e) {
               error_log('[RIVUNE upload] Database insert failed: '.$e->getMessage());
               if ($pdo->inTransaction()) $pdo->rollBack();
@@ -258,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     if ($ajaxUploadRequest) {
       while (ob_get_level() > 0) { @ob_end_clean(); }
       header('Content-Type: application/json; charset=utf-8');
-      error_log('[RIVUNE upload '.$uploadRequestId.'] finished in '.round(microtime(true)-$uploadStartedAt,2).'s; saved='.$saved.'; duplicates='.count($duplicates).' ; failed='.count($failed));
+      rivune_upload_diag($uploadRequestId, 'json_response_ready', ['elapsed_seconds'=>round(microtime(true)-$uploadStartedAt,2), 'saved'=>$saved, 'duplicates'=>count($duplicates), 'failed'=>count($failed)]);
       echo json_encode([
         'ok' => $saved > 0 || (!empty($duplicates) && empty($failed)),
         'saved' => $saved ?? 0,
