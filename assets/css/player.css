@@ -306,3 +306,43 @@ body.player-expanded .scroll-header .search{display:none!important;}
   color:var(--text);
   outline:none;
 }
+
+
+/* Match the expanded-player header buttons in both themes. */
+.expanded-top .collapse-player,
+.expanded-top #expanded-shuffle{
+  display:grid;
+  place-items:center;
+  box-sizing:border-box;
+  padding:0;
+  line-height:1;
+  font-size:22px;
+  color:var(--text);
+  background:var(--surface);
+  border:1px solid var(--line);
+  box-shadow:var(--shadow-soft);
+  -webkit-appearance:none;
+  appearance:none;
+}
+.expanded-top .collapse-player{
+  font-size:22px;
+  transform:none;
+}
+.expanded-top #expanded-shuffle{
+  font-size:22px;
+}
+.expanded-top .collapse-player:hover,
+.expanded-top .collapse-player:focus-visible,
+.expanded-top #expanded-shuffle:hover,
+.expanded-top #expanded-shuffle:focus-visible{
+  color:var(--text);
+  background:var(--raised);
+  border-color:var(--accent);
+  outline:none;
+}
+.expanded-top #expanded-shuffle.selected,
+.expanded-top #expanded-shuffle[aria-pressed="true"]{
+  color:#fff;
+  background:var(--accent2);
+  border-color:var(--accent2);
+}
