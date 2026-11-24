@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__.'/lib/bootstrap.php';
+require_once __DIR__.'/lib/upload_limits.php';
 require_once __DIR__.'/lib/admin_center.php';
 require_once __DIR__.'/lib/admin_logs.php';
 require_once __DIR__.'/lib/admin_alerts.php';
@@ -35,6 +36,21 @@ function rivune_is_mp3(string $path): bool {
 }
 $error=''; $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_admin_notice']); $saved=0; $duplicates=[]; $failed=[]; $search=trim((string)($_GET['q']??''));
 $page=max(1,(int)($_GET['page']??1)); $perPage=25;
+$uploadLimits = rivune_upload_limits();
+$ajaxUploadRequest = ($_SERVER['REQUEST_METHOD'] === 'POST') && ((string)($_GET['ajax_upload'] ?? '') === '1' || (string)($_POST['ajax_upload'] ?? '') === '1');
+// PHP empties $_POST and $_FILES when post_max_size is exceeded. Detect this
+// before CSRF parsing so the AJAX client receives a useful JSON response.
+if ($ajaxUploadRequest) {
+  require_admin();
+  $requestBytes = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
+  $postLimitBytes = rivune_ini_size_bytes(ini_get('post_max_size'));
+  if ($postLimitBytes > 0 && $requestBytes > $postLimitBytes) {
+    http_response_code(413);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The upload batch exceeds this server’s PHP request-size limit. Select fewer or smaller files.']);
+    exit;
+  }
+}
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
@@ -75,7 +91,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       } else {
         $saved=0; $failed=[]; $duplicates=[];
         $total=count($batch['name']);
-        for ($i=0;$i<$total;$i++) {
+        $totalBytes=array_sum(array_map('intval', $batch['size'] ?? []));
+        $batchTooLarge=$totalBytes>$uploadLimits['max_batch_bytes'];
+        if ($batchTooLarge) $failed[]='Selected batch exceeds the current server-safe total of '.rivune_format_upload_mb($uploadLimits['max_batch_bytes']).' MB';
+        for ($i=0;$i<$total && !$batchTooLarge;$i++) {
           $name=(string)$batch['name'][$i];
           $tmp=(string)$batch['tmp_name'][$i];
           $code=(int)$batch['error'][$i];
@@ -86,8 +105,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             else $reason='upload error '.$code;
             $failed[]=$name.': '.$reason; continue;
           }
-          if (!is_uploaded_file($tmp) || (int)$batch['size'][$i]<1 || (int)$batch['size'][$i]>25*1024*1024) {
-            $failed[]=$name.': file must be between 1 byte and 25 MB'; continue;
+          if (!is_uploaded_file($tmp) || (int)$batch['size'][$i]<1 || (int)$batch['size'][$i]>$uploadLimits['max_file_bytes']) {
+            $failed[]=$name.': file must be between 1 byte and '.rivune_format_upload_mb($uploadLimits['max_file_bytes']).' MB'; continue;
           }
           $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
           if ($ext!=='mp3' || !rivune_is_mp3($tmp)) {
@@ -166,25 +185,15 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       if ($failed) rivune_alert_raise($pdo, 'upload_failure', 'warning', 'One or more uploads failed', count($failed).' file(s) failed in the latest upload batch. Review the upload result and activity log.');
       if ($duplicates) rivune_alert_raise($pdo, 'upload_duplicate', 'info', 'Duplicate music was skipped', count($duplicates).' identical file(s) were skipped by SHA-256 duplicate detection.');
     }
-    if (($_POST['ajax_upload']??'')==='1') {
+    if ($ajaxUploadRequest) {
       header('Content-Type: application/json; charset=utf-8');
-      $listQuery = $search !== ''
-        ? $pdo->prepare("SELECT id,title,artist,album FROM tracks WHERE title LIKE ? OR artist LIKE ? OR album LIKE ? ORDER BY id DESC LIMIT 25 OFFSET ".(($page-1)*25))
-        : $pdo->prepare("SELECT id,title,artist,album FROM tracks ORDER BY id DESC LIMIT 25 OFFSET ".(($page-1)*25));
-      if ($search !== '') {
-        $term = '%'.$search.'%';
-        $listQuery->execute([$term,$term,$term]);
-      } else {
-        $listQuery->execute();
-      }
       echo json_encode([
         'ok' => $saved > 0 || (!empty($duplicates) && empty($failed)),
         'saved' => $saved ?? 0,
         'duplicates' => count($duplicates ?? []),
         'notice' => $notice,
-        'error' => $error,
-        'tracks' => $listQuery->fetchAll()
-      ]);
+        'error' => $error
+      ], JSON_INVALID_UTF8_SUBSTITUTE);
       exit;
     }
   } elseif ($action==='refresh_storage') {
