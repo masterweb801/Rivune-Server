@@ -59,6 +59,19 @@ $error=''; $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSI
 $page=max(1,(int)($_GET['page']??1)); $perPage=25;
 $uploadLimits = rivune_upload_limits();
 $ajaxUploadRequest = ($_SERVER['REQUEST_METHOD'] === 'POST') && ((string)($_GET['ajax_upload'] ?? '') === '1' || (string)($_POST['ajax_upload'] ?? '') === '1');
+if ($ajaxUploadRequest) {
+  register_shutdown_function(static function (): void {
+    $lastError = error_get_last();
+    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+    if (!$lastError || !in_array($lastError['type'], $fatalTypes, true)) return;
+    error_log('[RIVUNE upload] Fatal PHP error: '.$lastError['message'].' in '.$lastError['file'].':'.$lastError['line']);
+    if (!headers_sent()) {
+      http_response_code(500);
+      header('Content-Type: application/json; charset=utf-8');
+      echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The server encountered an internal error while processing this upload. Check the server PHP error log.']);
+    }
+  });
+}
 // PHP empties $_POST and $_FILES when post_max_size is exceeded. Detect this
 // before CSRF parsing so the AJAX client receives a useful JSON response.
 if ($ajaxUploadRequest) {
@@ -149,6 +162,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
             $lockQuery->execute([$uploadLock]);
             $lockAcquired = (int)$lockQuery->fetchColumn() === 1;
           } catch (Throwable $e) {
+            error_log('[RIVUNE upload] Database lock request failed: '.$e->getMessage());
             $lockAcquired = false;
           }
           if (!$lockAcquired) {
@@ -179,10 +193,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
               }
               $saved++;
             } catch (Throwable $e) {
+              error_log('[RIVUNE upload] Database insert failed: '.$e->getMessage());
               @unlink($dir.'/'.$stored);
               $failed[]=$name.': database insert failed';
             }
           } catch (Throwable $e) {
+            error_log('[RIVUNE upload] Duplicate verification failed: '.$e->getMessage());
             $failed[] = $name . ': duplicate verification failed; file was not accepted';
           } finally {
             try {
