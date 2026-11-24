@@ -4,6 +4,8 @@ require_once __DIR__.'/lib/upload_diagnostics.php';
 require __DIR__.'/lib/bootstrap.php';
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 require_admin();
+// Record page access to verify that the diagnostics logger can write.
+rivune_upload_diag('diagnostics', 'diagnostics_page_open', ['method'=>$_SERVER['REQUEST_METHOD'] ?? 'GET']);
 header('Cache-Control: no-store, private, max-age=0');
 header('Pragma: no-cache');
 
