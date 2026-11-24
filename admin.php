@@ -134,6 +134,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   } elseif ($action==='logout') { require_admin(); rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
   elseif ($action==='upload') {
     require_admin();
+    // Authentication and CSRF checks are complete. Release PHP's per-session
+    // lock before hashing files, moving uploads, and waiting on MySQL so other
+    // admin requests cannot queue behind this potentially slow request.
+    if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
     rivune_processing_ensure_schema($pdo);
     $batch=$_FILES['mp3']??null;
     if (!$batch || !isset($batch['name']) || !is_array($batch['name'])) {
