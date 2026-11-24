@@ -9,7 +9,7 @@ rivune_maintenance_enforce($pdo, 'html');
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
 <title>RIVUNE | Music Without Boundaries</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2">
-<link rel="stylesheet" href="assets/css/app.css?v=app-core-5">
+<link rel="stylesheet" href="assets/css/app.css?v=scroll-header-1">
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/library.css?v=library-1">
@@ -49,5 +49,5 @@ rivune_maintenance_enforce($pdo, 'html');
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=library-analytics-1" defer></script>
+<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=scroll-header-1" defer></script>
 </body></html>
