@@ -68,6 +68,16 @@ if ($ajaxUploadRequest) {
   $uploadStartedAt = microtime(true);
   error_log('[RIVUNE upload '.$uploadRequestId.'] started; content_length='.(int)($_SERVER['CONTENT_LENGTH'] ?? 0).'; upload_max_filesize='.ini_get('upload_max_filesize').'; post_max_size='.ini_get('post_max_size').'; memory_limit='.ini_get('memory_limit').'; max_execution_time='.ini_get('max_execution_time'));
   @set_time_limit(180);
+  set_exception_handler(static function (Throwable $exception) use ($uploadRequestId, $uploadStartedAt): void {
+    error_log('[RIVUNE upload '.$uploadRequestId.'] uncaught exception after '.round(microtime(true)-$uploadStartedAt,2).'s: '.get_class($exception).': '.$exception->getMessage().' in '.$exception->getFile().':'.$exception->getLine());
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+    if (!headers_sent()) {
+      http_response_code(500);
+      header('Content-Type: application/json; charset=utf-8');
+    }
+    echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The server could not finish processing this upload. Reference: '.$uploadRequestId.'. Please retry with one smaller batch.'], JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+  });
   register_shutdown_function(static function () use ($uploadRequestId, $uploadStartedAt): void {
     $lastError = error_get_last();
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
@@ -89,6 +99,7 @@ if ($ajaxUploadRequest) {
   $requestBytes = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
   $postLimitBytes = rivune_ini_size_bytes(ini_get('post_max_size'));
   if ($postLimitBytes > 0 && $requestBytes > $postLimitBytes) {
+    while (ob_get_level() > 0) { @ob_end_clean(); }
     http_response_code(413);
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The upload batch exceeds this server’s PHP request-size limit. Select fewer or smaller files.']);
@@ -241,6 +252,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
       if ($duplicates) rivune_alert_raise($pdo, 'upload_duplicate', 'info', 'Duplicate music was skipped', count($duplicates).' identical file(s) were skipped by SHA-256 duplicate detection.');
     }
     if ($ajaxUploadRequest) {
+      while (ob_get_level() > 0) { @ob_end_clean(); }
       header('Content-Type: application/json; charset=utf-8');
       error_log('[RIVUNE upload '.$uploadRequestId.'] finished in '.round(microtime(true)-$uploadStartedAt,2).'s; saved='.$saved.'; duplicates='.count($duplicates).' ; failed='.count($failed));
       echo json_encode([
