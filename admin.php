@@ -6,7 +6,7 @@ require_once __DIR__.'/lib/admin_center.php';
 require_once __DIR__.'/lib/admin_logs.php';
 require_once __DIR__.'/lib/admin_alerts.php';
 require_once __DIR__.'/lib/admin_auth.php';
-require_once __DIR__.'/lib/mp3_artwork.php';
+require_once __DIR__.'/lib/track_processing.php';
 header('Cache-Control: no-store, private, max-age=0');
 header('Pragma: no-cache');
 if (!isset($pdo)) { header('Location: install.php'); exit; }
@@ -206,18 +206,20 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
               continue;
             }
             try {
+              $pdo->beginTransaction();
               $q=$pdo->prepare('INSERT INTO tracks(title,artist,album,original_name,stored_name,file_hash) VALUES(?,?,?,?,?,?)');
               $q->execute([substr($title,0,190),substr($sharedArtist,0,190),substr($sharedAlbum,0,190),basename($name),$stored,$contentHash]);
               $trackId=(int)$pdo->lastInsertId();
-              if ($embeddedArtwork!==null && !rivune_save_embedded_artwork($trackId,$embeddedArtwork)) {
-                rivune_admin_log($pdo,'upload','warning','Embedded artwork could not be saved for track #'.$trackId.'.');
-              }
+              $queueInsert=$pdo->prepare("INSERT INTO track_processing_jobs(track_id,status) VALUES(?,'pending')");
+              $queueInsert->execute([$trackId]);
+              $pdo->commit();
               $saved++;
               error_log('[RIVUNE upload '.$uploadRequestId.'] database save completed: '.basename($name).' track_id='.$trackId);
             } catch (Throwable $e) {
               error_log('[RIVUNE upload] Database insert failed: '.$e->getMessage());
+              if ($pdo->inTransaction()) $pdo->rollBack();
               @unlink($dir.'/'.$stored);
-              $failed[]=$name.': database insert failed';
+              $failed[]=$name.': database or processing-queue insert failed';
             }
           } catch (Throwable $e) {
             error_log('[RIVUNE upload] Duplicate verification failed: '.$e->getMessage());
