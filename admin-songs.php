@@ -8,9 +8,10 @@ rivune_processing_ensure_schema($pdo);
 $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_admin_notice']);
 $search=trim((string)($_GET['q']??''));$page=max(1,(int)($_GET['page']??1));$perPage=25;
 $where=$search!==''?' WHERE title LIKE ? OR artist LIKE ? OR album LIKE ?':'';
+$listWhere=$search!==''?' WHERE t.title LIKE ? OR t.artist LIKE ? OR t.album LIKE ?':'';
 $count=$pdo->prepare('SELECT COUNT(*) FROM tracks'.$where);if($search!==''){$term='%'.$search.'%';$count->execute([$term,$term,$term]);}else{$count->execute();}
 $total=(int)$count->fetchColumn();$pages=max(1,(int)ceil($total/$perPage));$page=min($page,$pages);
-$stmt=$pdo->prepare('SELECT t.id,t.title,t.artist,t.album,j.status AS processing_status FROM tracks t LEFT JOIN track_processing_jobs j ON j.track_id=t.id'.str_replace(' WHERE title',' WHERE t.title',$where).' ORDER BY t.id DESC LIMIT '.$perPage.' OFFSET '.(($page-1)*$perPage));if($search!=='')$stmt->execute([$term,$term,$term]);else$stmt->execute();$tracks=$stmt->fetchAll();
+$stmt=$pdo->prepare('SELECT t.id,t.title,t.artist,t.album,j.status AS processing_status FROM tracks t LEFT JOIN track_processing_jobs j ON j.track_id=t.id'.$listWhere.' ORDER BY t.id DESC LIMIT '.$perPage.' OFFSET '.(($page-1)*$perPage));if($search!=='')$stmt->execute([$term,$term,$term]);else$stmt->execute();$tracks=$stmt->fetchAll();
 ?><!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Manage songs | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2">
 <link rel="stylesheet" href="assets/css/app.css?v=app-core-5">
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
@@ -24,7 +25,7 @@ $stmt=$pdo->prepare('SELECT t.id,t.title,t.artist,t.album,j.status AS processing
 <p class="muted">Select Artwork to replace or remove a track's cover. Artwork maintenance for embedded covers is available as a separate route.</p><a class="text-link" href="admin-extract-artwork.php">Open artwork maintenance →</a></section></main>
 <script>
 (function(){
- const token="' . csrf_token() . '";
+ const token=<?= json_encode(csrf_token()) ?>;
  async function resumeQueue(){
    let touched=false;
    for(let i=0;i<200;i++){
