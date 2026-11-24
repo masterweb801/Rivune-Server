@@ -106,7 +106,7 @@
     catch(error){console.warn('RIVUNE native bridge message failed',error);return false;}
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
-  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',libraryTotal=0,fullLibraryLoaded=false;
+  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null;
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
     const source=searchQuery?displayTracks:tracks,shown=source;
@@ -121,13 +121,25 @@
     });
   }
   async function fetchPage({reset=false}={}){
-    if(loadingPage||(!hasMore&&!reset&&page>1))return;
+    // A new search must supersede an older library request, even if the
+    // initial page or a previous search is still loading.
+    if(loadingPage&&!reset)return;
+    if(reset){
+      if(activeRequestController)activeRequestController.abort();
+      loadingPage=false;
+      requestSequence++;
+    }
+    const requestId=++requestSequence;
+    const controller=new AbortController();
+    activeRequestController=controller;
     loadingPage=true;$('load-more').hidden=true;
     if(reset){page=1;hasMore=false;displayTracks=[];if(!searchQuery)tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
     try{
       const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:'popular'});
-      const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Library request failed');
+      const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
+      if(!response.ok)throw new Error('Library request failed (HTTP '+response.status+')');
       const data=await response.json();
+      if(requestId!==requestSequence)return;
       if(nativeMode){await ensureFullLibrary();return;}
       const incoming=Array.isArray(data.tracks)?data.tracks:[];
       if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
@@ -141,8 +153,15 @@
       libraryTotal=Number(data.pagination?.total??displayTracks.length);hasMore=!!data.pagination?.has_more;page+=1;fullLibraryLoaded=!hasMore&&!searchQuery;render();
       $('library-status').textContent=hasMore?'Scroll to load more songs.':(libraryTotal+' songs loaded');$('load-more').hidden=!hasMore;
       if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
-    }catch(error){if(reset){list.replaceChildren();const p=document.createElement('p');p.className='empty';p.textContent='Could not load the music library. Please refresh in a moment.';list.append(p);$('count').textContent='Unavailable';}$('library-status').textContent='Could not load more songs. Please try again.';$('load-more').hidden=false;}
-    finally{loadingPage=false;}
+    }catch(error){
+      if(error&&error.name==='AbortError')return;
+      if(requestId!==requestSequence)return;
+      if(reset){list.replaceChildren();const p=document.createElement('p');p.className='empty';p.textContent='Could not load the music library. Please refresh in a moment.';list.append(p);$('count').textContent='Unavailable';}
+      $('library-status').textContent='Could not load songs. Please try again.';$('load-more').hidden=false;
+      console.error('RIVUNE library request failed:',error);
+    }finally{
+      if(requestId===requestSequence){loadingPage=false;activeRequestController=null;}
+    }
   }
   async function ensureFullLibrary(){
     if(fullLibraryLoaded)return;
