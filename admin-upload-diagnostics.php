@@ -26,32 +26,70 @@ $lines = array_slice($lines, -80);
 <div class="admin-tool-actions" style="margin:14px 0">
   <button type="button" class="secondary" id="upload-endpoint-test">Test upload endpoint (no file)</button>
 </div>
-<p id="upload-endpoint-result" class="muted" role="status">This sends a small, empty multipart POST to the exact admin.php upload endpoint. It does not upload or save a song.</p>
+<p id="upload-endpoint-result" class="muted" role="status">The empty-request test checks the existing endpoint without uploading a file.</p>
+<div class="admin-tool-actions" style="margin:14px 0;align-items:center">
+  <input type="file" id="multipart-probe-file" accept=".mp3,audio/mpeg">
+  <button type="button" class="secondary" id="multipart-probe-test">Test PHP file reception</button>
+</div>
+<p id="multipart-probe-result" class="muted" role="status">Choose one small MP3 (preferably under 1 MB). This separate test checks PHP's multipart file reception only; it does not save the file or add a song.</p>
 <script>
 (function () {
-  const button = document.getElementById('upload-endpoint-test');
-  const output = document.getElementById('upload-endpoint-result');
-  if (!button || !output) return;
-  button.addEventListener('click', async function () {
-    button.disabled = true;
-    output.textContent = 'Testing the upload endpoint…';
+  const csrf = <?= json_encode(csrf_token()) ?>;
+  const emptyButton = document.getElementById('upload-endpoint-test');
+  const emptyOutput = document.getElementById('upload-endpoint-result');
+  if (emptyButton && emptyOutput) {
+    emptyButton.addEventListener('click', async function () {
+      emptyButton.disabled = true;
+      emptyOutput.textContent = 'Testing the upload endpoint…';
+      const data = new FormData();
+      data.append('csrf', csrf);
+      data.append('action', 'upload');
+      data.append('ajax_upload', '1');
+      try {
+        const response = await fetch('admin.php?ajax_upload=1', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {'X-Requested-With': 'XMLHttpRequest'},
+          body: data
+        });
+        const body = await response.text();
+        emptyOutput.textContent = 'HTTP ' + response.status + ' · ' + body.slice(0, 500);
+      } catch (error) {
+        emptyOutput.textContent = 'Request failed before a response: ' + String(error);
+      } finally {
+        emptyButton.disabled = false;
+      }
+    });
+  }
+
+  const fileInput = document.getElementById('multipart-probe-file');
+  const fileButton = document.getElementById('multipart-probe-test');
+  const fileOutput = document.getElementById('multipart-probe-result');
+  if (!fileInput || !fileButton || !fileOutput) return;
+  fileButton.addEventListener('click', async function () {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) {
+      fileOutput.textContent = 'Please choose one MP3 file first.';
+      return;
+    }
+    fileButton.disabled = true;
+    fileOutput.textContent = 'Sending ' + file.name + ' (' + file.size + ' bytes) to the isolated PHP probe…';
     const data = new FormData();
-    data.append('csrf', <?= json_encode(csrf_token()) ?>);
-    data.append('action', 'upload');
-    data.append('ajax_upload', '1');
+    data.append('csrf', csrf);
+    data.append('probe_file', file, file.name);
     try {
-      const response = await fetch('admin.php?ajax_upload=1', {
+      const response = await fetch('admin-upload-probe.php', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {'X-Requested-With': 'XMLHttpRequest'},
         body: data
       });
       const body = await response.text();
-      output.textContent = 'HTTP ' + response.status + ' · ' + body.slice(0, 500);
+      fileOutput.textContent = 'HTTP ' + response.status + ' · ' + body.slice(0, 700);
     } catch (error) {
-      output.textContent = 'Request failed before a response: ' + String(error);
+      fileOutput.textContent = 'Request failed before a response: ' + String(error);
     } finally {
-      button.disabled = false;
+      fileButton.disabled = false;
     }
   });
 })();
