@@ -39,7 +39,7 @@
     const delta=currentPageY-previousPageY;
     previousPageY=currentPageY;
     if(document.body.classList.contains('player-expanded')){
-      document.body.classList.add('nav-hidden');
+      document.body.classList.remove('nav-hidden');
       moveSearchToOverlay(false);
       directionTravel=0;
       return;
@@ -223,7 +223,13 @@
   }
   function setExpanded(open){
     const panel=$('expanded-player');panel.classList.toggle('open',open);
-    panel.setAttribute('aria-hidden',open?'false':'true');document.body.classList.toggle('player-expanded',open);
+    panel.setAttribute('aria-hidden',open?'false':'true');
+    document.body.classList.toggle('player-expanded',open);
+    if(open){
+      document.body.classList.remove('nav-hidden');
+      moveSearchToOverlay(false);
+      directionTravel=0;
+    }
   }
   async function toggleShuffle(){
     if(!fullLibraryLoaded){try{await ensureFullLibrary();}catch(error){console.warn('Full-library shuffle unavailable',error);}}
