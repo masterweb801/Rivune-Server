@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 }
 $done=$offset >= $total || ($_SERVER['REQUEST_METHOD']==='POST' && $processed===0);
 ?><!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Extract embedded artwork | RIVUNE Admin</title><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Extract embedded artwork | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2">
 <link rel="stylesheet" href="assets/css/app.css?v=app-core-5">
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
