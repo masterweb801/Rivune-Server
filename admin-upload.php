@@ -52,6 +52,28 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    message.replaceChildren(node);status.textContent='Upload failed.';
    button.disabled=false;button.textContent='Upload selected tracks';
  }
+ async function runProcessingQueue(){
+   const token=form.querySelector('[name="csrf"]').value;
+   let totalProcessed=0;
+   for(let i=0;i<200;i++){
+     try{
+       const body=new URLSearchParams({csrf:token});
+       const response=await fetch('admin-process-queue.php',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/x-www-form-urlencoded','X-Requested-With':'XMLHttpRequest'},body:body.toString()});
+       const result=await response.json();
+       if(!response.ok||!result.ok)throw new Error(result.error||'Queue request failed.');
+       totalProcessed+=Number(result.processed||0);
+       if(Number(result.remaining)===0){
+         if(totalProcessed>0)status.textContent='Upload complete. Background metadata and artwork processing finished.';
+         return;
+       }
+       status.textContent='Upload complete. Processing metadata and artwork… '+totalProcessed+' completed; '+result.remaining+' waiting.';
+     }catch(error){
+       status.textContent='Upload complete. Background processing is queued and will resume when the admin page is opened again.';
+       return;
+     }
+   }
+   status.textContent='Upload complete. Remaining tracks are safely queued for later processing.';
+ }
  form.addEventListener('submit',function(event){
    event.preventDefault();
    const files=Array.from(fileInput.files||[]);
@@ -69,7 +91,7 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    xhr.upload.addEventListener('progress',e=>{
      if(!e.lengthComputable){status.textContent='Uploading files…';return;}
      const p=Math.round(e.loaded/e.total*100);progress.value=p;label.textContent=p+'%';
-     status.textContent=p>=100?'Upload received. Server is validating and saving tracks…':'Uploading files…';
+     status.textContent=p>=100?'Upload received. Saving tracks…':'Uploading files…';
    });
    xhr.addEventListener('load',()=>{
      if(completed)return;
@@ -82,8 +104,9 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
      node.textContent=text||'Upload request completed.';message.replaceChildren(node);
      if(Number(result.saved)>0)chime();
      if(result.ok&&!result.error)form.reset();
-     status.textContent=Number(result.saved)>0?'Upload complete.':(result.error?'Some files need attention.':'Upload request finished.');
+     status.textContent=Number(result.saved)>0?'Upload complete. Background metadata and artwork processing is queued.':(result.error?'Some files need attention.':'Upload request finished.');
      button.disabled=false;button.textContent='Upload selected tracks';
+     if(Number(result.saved)>0)runProcessingQueue();
    });
    xhr.addEventListener('error',()=>{if(!completed){completed=true;showError('The network connection was interrupted. Check your connection and try again.');}});
    xhr.addEventListener('abort',()=>{if(!completed){completed=true;showError('The upload request was cancelled before the server confirmed the result.');}});
