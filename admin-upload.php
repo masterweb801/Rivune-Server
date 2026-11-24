@@ -85,10 +85,11 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    if(totalBytes>maxBatchBytes){showError('Selected files total '+(totalBytes/1048576).toFixed(1)+' MB; the current batch limit is '+(maxBatchBytes/1048576).toFixed(1)+' MB. Select fewer files.');return;}
    unlock();button.disabled=true;button.textContent='Uploading…';
    message.textContent='';wrap.style.display='block';progress.value=0;label.textContent='0%';status.textContent='Starting upload…';
-   const xhr=new XMLHttpRequest();let completed=false;
+   const xhr=new XMLHttpRequest();let completed=false;const requestStartedAt=Date.now();let lastLoaded=0,lastTotal=0;
    xhr.open('POST',form.action,true);xhr.withCredentials=true;
    xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');xhr.timeout=180000;
    xhr.upload.addEventListener('progress',e=>{
+     if(e.lengthComputable){lastLoaded=e.loaded;lastTotal=e.total;}
      if(!e.lengthComputable){status.textContent='Uploading files…';return;}
      const p=Math.round(e.loaded/e.total*100);progress.value=p;label.textContent=p+'%';
      status.textContent=p>=100?'Upload received. Saving tracks…':'Uploading files…';
@@ -96,7 +97,7 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    xhr.addEventListener('load',()=>{
      if(completed)return;
      let result=null;try{result=JSON.parse(xhr.responseText||'');}catch(e){}
-     if(!result||typeof result!=='object'){showError(xhr.status===0?'The connection was interrupted before the server returned a response.':'The server returned an unreadable response (HTTP '+xhr.status+').');completed=true;return;}
+     if(!result||typeof result!=='object'){showError(xhr.status===0?'The connection was interrupted before the server returned a response (readyState '+xhr.readyState+', sent '+lastLoaded+'/'+lastTotal+' bytes, '+Math.round((Date.now()-requestStartedAt)/1000)+' seconds).':'The server returned an unreadable response (HTTP '+xhr.status+').');completed=true;return;}
      if(xhr.status<200||xhr.status>=300){showError(result.error||result.notice||('The server rejected the upload (HTTP '+xhr.status+').'));completed=true;return;}
      completed=true;progress.value=100;label.textContent='100%';
      const text=[result.notice,result.error].filter(Boolean).join(' ');
@@ -108,9 +109,9 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
      button.disabled=false;button.textContent='Upload selected tracks';
      if(Number(result.saved)>0)runProcessingQueue();
    });
-   xhr.addEventListener('error',()=>{if(!completed){completed=true;showError('The network connection was interrupted. Check your connection and try again.');}});
-   xhr.addEventListener('abort',()=>{if(!completed){completed=true;showError('The upload request was cancelled before the server confirmed the result.');}});
-   xhr.addEventListener('timeout',()=>{if(!completed){completed=true;showError('The request exceeded the 3-minute browser timeout. Try a smaller batch.');}});
+   xhr.addEventListener('error',()=>{if(!completed){completed=true;showError('The network connection was interrupted (HTTP '+xhr.status+', readyState '+xhr.readyState+', sent '+lastLoaded+'/'+lastTotal+' bytes, '+Math.round((Date.now()-requestStartedAt)/1000)+' seconds).');}});
+   xhr.addEventListener('abort',()=>{if(!completed){completed=true;showError('The upload request was cancelled (sent '+lastLoaded+'/'+lastTotal+' bytes, '+Math.round((Date.now()-requestStartedAt)/1000)+' seconds).');}});
+   xhr.addEventListener('timeout',()=>{if(!completed){completed=true;showError('The request exceeded the 3-minute browser timeout (sent '+lastLoaded+'/'+lastTotal+' bytes).');}});
    xhr.send(new FormData(form));
  });
 })();
