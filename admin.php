@@ -60,15 +60,25 @@ $page=max(1,(int)($_GET['page']??1)); $perPage=25;
 $uploadLimits = rivune_upload_limits();
 $ajaxUploadRequest = ($_SERVER['REQUEST_METHOD'] === 'POST') && ((string)($_GET['ajax_upload'] ?? '') === '1' || (string)($_POST['ajax_upload'] ?? '') === '1');
 if ($ajaxUploadRequest) {
-  register_shutdown_function(static function (): void {
+  // Keep fatal-error output inside the JSON response instead of allowing the
+  // web server to close the connection with an empty/partial response.
+  if (!headers_sent()) { @ini_set('display_errors', '0'); }
+  ob_start();
+  $uploadRequestId = bin2hex(random_bytes(6));
+  $uploadStartedAt = microtime(true);
+  error_log('[RIVUNE upload '.$uploadRequestId.'] started; content_length='.(int)($_SERVER['CONTENT_LENGTH'] ?? 0).'; upload_max_filesize='.ini_get('upload_max_filesize').'; post_max_size='.ini_get('post_max_size').'; memory_limit='.ini_get('memory_limit').'; max_execution_time='.ini_get('max_execution_time'));
+  @set_time_limit(180);
+  register_shutdown_function(static function () use ($uploadRequestId, $uploadStartedAt): void {
     $lastError = error_get_last();
     $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
     if (!$lastError || !in_array($lastError['type'], $fatalTypes, true)) return;
-    error_log('[RIVUNE upload] Fatal PHP error: '.$lastError['message'].' in '.$lastError['file'].':'.$lastError['line']);
+    error_log('[RIVUNE upload '.$uploadRequestId.'] fatal after '.round(microtime(true)-$uploadStartedAt,2).'s: '.$lastError['message'].' in '.$lastError['file'].':'.$lastError['line']);
+    while (ob_get_level() > 0) { @ob_end_clean(); }
     if (!headers_sent()) {
       http_response_code(500);
       header('Content-Type: application/json; charset=utf-8');
-      echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The server encountered an internal error while processing this upload. Check the server PHP error log.']);
+      header('Connection: close');
+      echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The server encountered an internal error while processing this upload. Reference: '.$uploadRequestId.'.']);
     }
   });
 }
@@ -146,7 +156,14 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           if ($ext!=='mp3' || !rivune_is_mp3($tmp)) {
             $failed[]=$name.': file does not contain a valid MP3 audio frame'; continue;
           }
-          $embeddedArtwork=rivune_extract_mp3_artwork($tmp);
+          // Artwork is optional: a malformed/large embedded cover must never
+          // terminate the whole MP3 upload request.
+          $embeddedArtwork = null;
+          try {
+            $embeddedArtwork = rivune_extract_mp3_artwork($tmp);
+          } catch (Throwable $artworkError) {
+            error_log('[RIVUNE upload '.$uploadRequestId.'] artwork extraction failed for '.basename($name).': '.$artworkError->getMessage());
+          }
           $contentHash=hash_file('sha256',$tmp);
           if ($contentHash===false) {
             $failed[]=$name.': could not calculate file hash'; continue;
@@ -224,6 +241,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
     if ($ajaxUploadRequest) {
       header('Content-Type: application/json; charset=utf-8');
+      error_log('[RIVUNE upload '.$uploadRequestId.'] finished in '.round(microtime(true)-$uploadStartedAt,2).'s; saved='.$saved.'; duplicates='.count($duplicates).' ; failed='.count($failed));
       echo json_encode([
         'ok' => $saved > 0 || (!empty($duplicates) && empty($failed)),
         'saved' => $saved ?? 0,
