@@ -25,7 +25,6 @@ themeToggle.addEventListener('click', () => {
 // The public header and search form one temporary overlay.
 // They are hidden while scrolling down and revealed together while scrolling up.
 const topbarEl = document.querySelector('.topbar');
-const searchEl = document.querySelector('#search');
 const scrollHeader = document.createElement('div');
 scrollHeader.className = 'scroll-header';
 scrollHeader.setAttribute('role', 'region');
