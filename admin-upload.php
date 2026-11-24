@@ -113,6 +113,5 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    xhr.addEventListener('timeout',()=>{if(!completed){completed=true;showError('The request exceeded the 3-minute browser timeout. Try a smaller batch.');}});
    xhr.send(new FormData(form));
  });
- runProcessingQueue();
 })();
 </script></body></html>
