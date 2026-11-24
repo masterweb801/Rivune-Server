@@ -123,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
   } elseif ($action==='logout') { require_admin(); rivune_admin_log($pdo, 'logout', 'success', 'Administrator signed out.'); $_SESSION=[]; session_regenerate_id(true); header('Location: admin.php'); exit; }
   elseif ($action==='upload') {
     require_admin();
+    rivune_processing_ensure_schema($pdo);
     $batch=$_FILES['mp3']??null;
     if (!$batch || !isset($batch['name']) || !is_array($batch['name'])) {
       $error='Choose one or more MP3 files.';
@@ -157,14 +158,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           if ($ext!=='mp3' || !rivune_is_mp3($tmp)) {
             $failed[]=$name.': file does not contain a valid MP3 audio frame'; continue;
           }
-          // Artwork is optional: a malformed/large embedded cover must never
-          // terminate the whole MP3 upload request.
-          $embeddedArtwork = null;
-          try {
-            $embeddedArtwork = rivune_extract_mp3_artwork($tmp);
-          } catch (Throwable $artworkError) {
-            error_log('[RIVUNE upload '.$uploadRequestId.'] artwork extraction failed for '.basename($name).': '.$artworkError->getMessage());
-          }
+          // Artwork and metadata are intentionally deferred to the background queue.
           error_log('[RIVUNE upload '.$uploadRequestId.'] MP3 validation passed: '.basename($name));
           $contentHash=hash_file('sha256',$tmp);
           if ($contentHash===false) {
