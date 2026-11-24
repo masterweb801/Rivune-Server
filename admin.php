@@ -17,6 +17,27 @@ if (!isset($pdo)) { header('Location: install.php'); exit; }
 function rivune_is_mp3(string $path): bool {
   $fp = @fopen($path, 'rb');
   if (!$fp) return false;
+
+  // Skip the complete ID3v2 tag before scanning for MPEG frames. Reading only
+  // the first megabyte can reject valid MP3s with large embedded cover art.
+  $header = fread($fp, 10);
+  if ($header === false) { fclose($fp); return false; }
+  if (strlen($header) >= 3 && substr($header, 0, 3) === 'ID3') {
+    if (strlen($header) !== 10 || !in_array(ord($header[3]), [2,3,4], true)) {
+      fclose($fp);
+      return false;
+    }
+    $tagSize = 0;
+    for ($i = 6; $i < 10; $i++) {
+      $byte = ord($header[$i]);
+      if (($byte & 0x80) !== 0) { fclose($fp); return false; }
+      $tagSize = ($tagSize << 7) | $byte;
+    }
+    if (fseek($fp, 10 + $tagSize, SEEK_SET) !== 0) { fclose($fp); return false; }
+  } else {
+    rewind($fp);
+  }
+
   $data = fread($fp, 1048576);
   fclose($fp);
   if ($data === false || strlen($data) < 4) return false;
