@@ -51,4 +51,4 @@ The Git repository ignores `storage/config.php` and uploaded music, so normal Gi
 - Do not commit `storage/config.php`, database dumps, or uploaded music to Git.
 
 ## Project status
-The `dev` branch is the active PHP website implementation. The old Node.js/LAN discovery files remain in the repository but are not used by this PHP entry point. The `main` branch has not been changed.
+The `dev` branch is the active PHP website implementation. The obsolete Node.js/LAN discovery server and legacy static frontend have been removed; the public site is served by the root PHP entry point. The `main` branch has not been changed.
