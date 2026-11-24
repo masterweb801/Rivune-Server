@@ -27,6 +27,10 @@ function rivune_id3_text_value(string $payload): string {
     $value = iconv('ISO-8859-1', 'UTF-8//IGNORE', $value) ?: '';
   } elseif ($encoding === 0 && function_exists('mb_convert_encoding')) {
     $value = mb_convert_encoding($value, 'UTF-8', 'ISO-8859-1');
+  } elseif (($encoding === 1 || $encoding === 2) && !function_exists('iconv') && !function_exists('mb_convert_encoding')) {
+    return '';
+  } elseif ($encoding === 0 && !function_exists('iconv') && !function_exists('mb_convert_encoding')) {
+    $value = preg_replace('/[^\\x20-\\x7E]/', '', $value) ?? '';
   } elseif ($encoding === 3 && !preg_match('//u', $value)) {
     $value = '';
   }
@@ -35,13 +39,28 @@ function rivune_id3_text_value(string $payload): string {
 }
 
 /** Read only the small ID3 text fields needed for the library. */
+function rivune_extract_id3v1_metadata(string $path): array {
+  $fp=@fopen($path,'rb');
+  if (!$fp) return [];
+  if (fseek($fp,-128,SEEK_END)!==0) { fclose($fp); return []; }
+  $tag=fread($fp,128);
+  fclose($fp);
+  if ($tag===false || strlen($tag)!==128 || substr($tag,0,3)!=='TAG') return [];
+  $fields=['title'=>trim(substr($tag,3,30)),'artist'=>trim(substr($tag,33,30)),'album'=>trim(substr($tag,63,30))];
+  foreach ($fields as $key=>$value) {
+    if ($value!=='' && function_exists('iconv')) $fields[$key]=trim(iconv('ISO-8859-1','UTF-8//IGNORE',$value) ?: '');
+    elseif ($value!=='') $fields[$key]=preg_replace('/[^\\x20-\\x7E]/','',$value) ?? '';
+  }
+  return array_filter($fields,static fn($value)=>$value!=='');
+}
+
 function rivune_extract_mp3_metadata(string $path): array {
   $fp = @fopen($path, 'rb');
   if (!$fp) return [];
   $header = fread($fp, 10);
   if ($header === false || strlen($header) !== 10 || substr($header, 0, 3) !== 'ID3') {
     fclose($fp);
-    return [];
+    return rivune_extract_id3v1_metadata($path);
   }
   $major = ord($header[3]);
   if (!in_array($major, [2, 3, 4], true)) { fclose($fp); return []; }
@@ -102,5 +121,5 @@ function rivune_extract_mp3_metadata(string $path): array {
     $value = rivune_id3_text_value($payload);
     if ($value !== '') $found[$map[$frameId]] = function_exists('mb_substr') ? mb_substr($value, 0, 190, 'UTF-8') : substr($value, 0, 190);
   }
-  return $found;
+  return $found ?: rivune_extract_id3v1_metadata($path);
 }
