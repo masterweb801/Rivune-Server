@@ -274,3 +274,35 @@ body.player-expanded{overflow:hidden;}
 @media(max-width:760px){
   .expanded-art{border-radius:var(--radius-artwork);}
 }
+
+/* Expanded player sits below the persistent navigation header. */
+:root{--public-nav-height:76px;}
+@media(max-width:500px){:root{--public-nav-height:66px;}}
+.scroll-header{z-index:40;}
+body.player-expanded .scroll-header{
+  transform:translate3d(0,0,0);
+  pointer-events:auto;
+  padding-bottom:0;
+  background:var(--bg);
+  border-bottom:1px solid var(--line);
+  box-shadow:none;
+}
+body.player-expanded .scroll-header .search{display:none!important;}
+.expanded-player{
+  inset:var(--public-nav-height,76px) 0 0;
+  height:auto;
+  z-index:30;
+}
+.expanded-top .collapse-player{
+  background:var(--surface);
+  color:var(--text);
+  border-color:var(--line);
+  box-shadow:var(--shadow-soft);
+}
+.expanded-top .collapse-player:hover,
+.expanded-top .collapse-player:focus-visible{
+  background:var(--raised);
+  border-color:var(--accent);
+  color:var(--text);
+  outline:none;
+}
