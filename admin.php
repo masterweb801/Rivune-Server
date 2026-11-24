@@ -152,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           if (!is_uploaded_file($tmp) || (int)$batch['size'][$i]<1 || (int)$batch['size'][$i]>$uploadLimits['max_file_bytes']) {
             $failed[]=$name.': file must be between 1 byte and '.rivune_format_upload_mb($uploadLimits['max_file_bytes']).' MB'; continue;
           }
+          error_log('[RIVUNE upload '.$uploadRequestId.'] file '.($i+1).'/'.$total.' received: '.basename($name).' ('.(int)$batch['size'][$i].' bytes)');
           $ext=strtolower(pathinfo($name,PATHINFO_EXTENSION));
           if ($ext!=='mp3' || !rivune_is_mp3($tmp)) {
             $failed[]=$name.': file does not contain a valid MP3 audio frame'; continue;
@@ -164,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           } catch (Throwable $artworkError) {
             error_log('[RIVUNE upload '.$uploadRequestId.'] artwork extraction failed for '.basename($name).': '.$artworkError->getMessage());
           }
+          error_log('[RIVUNE upload '.$uploadRequestId.'] MP3 validation passed: '.basename($name));
           $contentHash=hash_file('sha256',$tmp);
           if ($contentHash===false) {
             $failed[]=$name.': could not calculate file hash'; continue;
@@ -172,6 +174,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
           // held until the duplicate check and database insert have completed.
           // Fail closed if MySQL named locks are unavailable: accepting the file
           // without a lock would reintroduce the duplicate-upload race.
+          error_log('[RIVUNE upload '.$uploadRequestId.'] SHA-256 calculated: '.basename($name));
           $uploadLock = 'rivune_upload_' . substr($contentHash, 0, 50);
           $lockAcquired = false;
           try {
@@ -195,6 +198,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
               continue;
             }
 
+            error_log('[RIVUNE upload '.$uploadRequestId.'] duplicate check passed: '.basename($name));
             $title=pathinfo($name,PATHINFO_FILENAME);
             $stored=bin2hex(random_bytes(20)).'.mp3';
             if (!move_uploaded_file($tmp,$dir.'/'.$stored)) {
@@ -209,6 +213,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
                 rivune_admin_log($pdo,'upload','warning','Embedded artwork could not be saved for track #'.$trackId.'.');
               }
               $saved++;
+              error_log('[RIVUNE upload '.$uploadRequestId.'] database save completed: '.basename($name).' track_id='.$trackId);
             } catch (Throwable $e) {
               error_log('[RIVUNE upload] Database insert failed: '.$e->getMessage());
               @unlink($dir.'/'.$stored);
