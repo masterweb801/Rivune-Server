@@ -4,6 +4,7 @@ declare(strict_types=1);
 // This endpoint deliberately does not save files or touch the music database.
 // Its only purpose is to determine whether PHP receives multipart file uploads.
 require_once __DIR__ . '/lib/upload_diagnostics.php';
+require_once __DIR__ . '/lib/upload_limits.php';
 
 $requestId = '';
 try {
