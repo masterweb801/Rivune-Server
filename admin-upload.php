@@ -63,7 +63,7 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
        if(!response.ok||!result.ok)throw new Error(result.error||'Queue request failed.');
        totalProcessed+=Number(result.processed||0);
        if(Number(result.remaining)===0){
-         if(totalProcessed>0)status.textContent='Upload complete. Background metadata and artwork processing finished.';
+         if(totalProcessed>0)status.textContent=Number(result.failed)>0?'Upload complete. Background processing finished with '+result.failed+' item(s) needing attention.':'Upload complete. Background metadata and artwork processing finished.';
          return;
        }
        status.textContent='Upload complete. Processing metadata and artwork… '+totalProcessed+' completed; '+result.remaining+' waiting.';
@@ -113,5 +113,6 @@ $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_
    xhr.addEventListener('timeout',()=>{if(!completed){completed=true;showError('The request exceeded the 3-minute browser timeout. Try a smaller batch.');}});
    xhr.send(new FormData(form));
  });
+ runProcessingQueue();
 })();
 </script></body></html>
