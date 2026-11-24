@@ -22,4 +22,37 @@ foreach (rivune_upload_diag_paths() as $path) {
 }
 $lines = array_slice($lines, -80);
 ?><!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Upload diagnostics | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2"><link rel="stylesheet" href="assets/css/app.css?v=app-core-5"><link rel="stylesheet" href="assets/css/admin.css?v=admin-module-2"></head><body><main class="admin-wrap"><?php $adminActivePage='song_upload'; require __DIR__.'/lib/admin_navigation.php'; ?><section class="panel"><p class="eyebrow">SYSTEM DIAGNOSTICS</p><h1>Upload diagnostics</h1><p class="muted">Private server-side checkpoints for the latest upload requests. This helps locate where the hosting server stops responding. Only the most recent 80 entries are shown.</p><p><a class="text-link" href="admin-upload.php">← Back to Upload Songs</a></p><?php if (!$lines): ?><p class="muted">No upload diagnostic entries yet. After deploying the latest dev branch, make one small test upload and reload this page.</p><?php else: ?><pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:65vh;overflow:auto;padding:14px;border-radius:10px;background:var(--surface-2,#111);font-size:12px;line-height:1.5"><?= h(implode("\\n", $lines)) ?></pre><?php endif; ?><details style="margin-top:16px"><summary>Diagnostic storage status</summary><p class="muted">Private storage folder writable: <strong><?= $storageWritable ? 'Yes' : 'No' ?></strong></p><p class="muted">PHP temporary folder writable: <strong><?= $tempWritable ? 'Yes' : 'No' ?></strong></p><p class="muted">This status checks whether PHP can write diagnostic files; it does not expose their filesystem paths.</p></details><p class="muted">These entries contain request timing and processing phases, not audio contents or administrator credentials.</p></section></main></body></html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Upload diagnostics | RIVUNE Admin</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=design-tokens-2"><link rel="stylesheet" href="assets/css/app.css?v=app-core-5"><link rel="stylesheet" href="assets/css/admin.css?v=admin-module-2"></head><body><main class="admin-wrap"><?php $adminActivePage='song_upload'; require __DIR__.'/lib/admin_navigation.php'; ?><section class="panel"><p class="eyebrow">SYSTEM DIAGNOSTICS</p><h1>Upload diagnostics</h1><p class="muted">Private server-side checkpoints for the latest upload requests. This helps locate where the hosting server stops responding. Only the most recent 80 entries are shown.</p><p><a class="text-link" href="admin-upload.php">← Back to Upload Songs</a></p>
+<div class="admin-tool-actions" style="margin:14px 0">
+  <button type="button" class="secondary" id="upload-endpoint-test">Test upload endpoint (no file)</button>
+</div>
+<p id="upload-endpoint-result" class="muted" role="status">This sends a small, empty multipart POST to the exact admin.php upload endpoint. It does not upload or save a song.</p>
+<script>
+(function () {
+  const button = document.getElementById('upload-endpoint-test');
+  const output = document.getElementById('upload-endpoint-result');
+  if (!button || !output) return;
+  button.addEventListener('click', async function () {
+    button.disabled = true;
+    output.textContent = 'Testing the upload endpoint…';
+    const data = new FormData();
+    data.append('csrf', "" || '');
+    data.append('action', 'upload');
+    data.append('ajax_upload', '1');
+    try {
+      const response = await fetch('admin.php?ajax_upload=1', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: data
+      });
+      const body = await response.text();
+      output.textContent = 'HTTP ' + response.status + ' · ' + body.slice(0, 500);
+    } catch (error) {
+      output.textContent = 'Request failed before a response: ' + String(error);
+    } finally {
+      button.disabled = false;
+    }
+  });
+})();
+</script><?php if (!$lines): ?><p class="muted">No upload diagnostic entries yet. After deploying the latest dev branch, make one small test upload and reload this page.</p><?php else: ?><pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:65vh;overflow:auto;padding:14px;border-radius:10px;background:var(--surface-2,#111);font-size:12px;line-height:1.5"><?= h(implode("\\n", $lines)) ?></pre><?php endif; ?><details style="margin-top:16px"><summary>Diagnostic storage status</summary><p class="muted">Private storage folder writable: <strong><?= $storageWritable ? 'Yes' : 'No' ?></strong></p><p class="muted">PHP temporary folder writable: <strong><?= $tempWritable ? 'Yes' : 'No' ?></strong></p><p class="muted">This status checks whether PHP can write diagnostic files; it does not expose their filesystem paths.</p></details><p class="muted">These entries contain request timing and processing phases, not audio contents or administrator credentials.</p></section></main></body></html>
