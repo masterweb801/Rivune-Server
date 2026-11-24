@@ -1,6 +1,52 @@
 (() => {
   const audio=document.getElementById('audio'), list=document.getElementById('tracks');
   const search=document.getElementById('search');
+  // Direction-aware public header: navigation and search travel as one unit.
+  const publicTop=document.querySelector('.top');
+  const publicSearch=document.querySelector('.search');
+  const headerOverlay=document.createElement('div');
+  headerOverlay.className='scroll-header';
+  headerOverlay.setAttribute('aria-label','Navigation and music search');
+  const headerSpacer=document.createElement('div');
+  headerSpacer.className='top-spacer';
+  headerSpacer.setAttribute('aria-hidden','true');
+  publicTop.before(headerSpacer);
+  const searchSpacer=document.createElement('div');
+  searchSpacer.className='search-spacer';
+  searchSpacer.setAttribute('aria-hidden','true');
+  publicSearch.before(searchSpacer);
+  document.body.prepend(headerOverlay);
+  headerOverlay.append(publicTop,publicSearch);
+
+  let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
+  let directionTravel=0;
+  const directionThreshold=6;
+  function handlePublicScroll(){
+    const currentPageY=window.pageYOffset||document.documentElement.scrollTop||document.body.scrollTop||0;
+    const delta=currentPageY-previousPageY;
+    previousPageY=currentPageY;
+    if(document.body.classList.contains('player-expanded')){
+      document.body.classList.add('nav-hidden');
+      directionTravel=0;
+      return;
+    }
+    if(currentPageY<=20){
+      document.body.classList.remove('nav-hidden');
+      directionTravel=0;
+      return;
+    }
+    if(!delta)return;
+    directionTravel= Math.sign(directionTravel)===Math.sign(delta) ? directionTravel+delta : delta;
+    if(directionTravel>=directionThreshold){
+      document.body.classList.add('nav-hidden');
+      directionTravel=0;
+    }else if(directionTravel<=-directionThreshold){
+      document.body.classList.remove('nav-hidden');
+      directionTravel=0;
+    }
+  }
+  document.addEventListener('scroll',handlePublicScroll,{passive:true,capture:true});
+
   let tracks=[], displayTracks=[], queue=[], current=-1, shuffled=false, pointerStart=null;
   let nativeMode=false, nativePlaybackState=null;
   const $=id=>document.getElementById(id);
