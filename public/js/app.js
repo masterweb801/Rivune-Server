@@ -22,8 +22,7 @@ themeToggle.addEventListener('click', () => {
   document.querySelector('meta[name="theme-color"]').content = root.dataset.theme === 'light' ? '#F7F5FC' : '#11111D';
   syncThemeButton();
 });
-// The public header and search form one temporary overlay.
-// They are hidden while scrolling down and revealed together while scrolling up.
+// Keep navigation and search in one overlay; reveal it only on upward movement.
 const topbarEl = document.querySelector('.topbar');
 const scrollHeader = document.createElement('div');
 scrollHeader.className = 'scroll-header';
@@ -32,58 +31,57 @@ scrollHeader.setAttribute('aria-label', 'Navigation and music search');
 document.body.prepend(scrollHeader);
 scrollHeader.append(topbarEl, searchEl);
 
-let previousScrollY = Math.max(0, window.scrollY || 0);
-let scrollIntent = 0;
-let scrollFrame = false;
-const scrollDirectionThreshold = 4;
+let previousScrollY = 0;
+let lastDirectionChangeY = 0;
+let currentDirection = 0;
+const scrollDirectionThreshold = 3;
+
+function getPageScrollY() {
+  return Math.max(0, window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0);
+}
 
 function updateScrollNavigation() {
-  const currentY = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0);
-  const delta = currentY - previousScrollY;
-  previousScrollY = currentY;
+  const currentY = getPageScrollY();
 
   if (document.querySelector('.player')?.classList.contains('expanded')) {
     document.body.classList.add('nav-hidden');
-    scrollIntent = 0;
-    scrollFrame = false;
+    previousScrollY = currentY;
+    currentDirection = 0;
     return;
   }
 
   if (currentY <= 20) {
     document.body.classList.remove('nav-hidden');
-    scrollIntent = 0;
-    scrollFrame = false;
+    previousScrollY = currentY;
+    lastDirectionChangeY = currentY;
+    currentDirection = 0;
     return;
   }
 
-  if (delta !== 0) {
-    const direction = Math.sign(delta);
-    if (scrollIntent !== 0 && Math.sign(scrollIntent) !== direction) scrollIntent = 0;
-    scrollIntent += delta;
+  const delta = currentY - previousScrollY;
+  previousScrollY = currentY;
+  if (Math.abs(delta) < 1) return;
 
-    if (scrollIntent >= scrollDirectionThreshold) {
-      document.body.classList.add('nav-hidden');
-      scrollIntent = 0;
-    } else if (scrollIntent <= -scrollDirectionThreshold) {
-      document.body.classList.remove('nav-hidden');
-      scrollIntent = 0;
-    }
+  const direction = delta > 0 ? 1 : -1;
+  if (direction !== currentDirection) {
+    currentDirection = direction;
+    lastDirectionChangeY = currentY;
   }
-  scrollFrame = false;
+
+  if (Math.abs(currentY - lastDirectionChangeY) >= scrollDirectionThreshold) {
+    document.body.classList.toggle('nav-hidden', direction > 0);
+  }
 }
 
-window.addEventListener('scroll', () => {
-  if (scrollFrame) return;
-  scrollFrame = true;
-  window.requestAnimationFrame(updateScrollNavigation);
-}, { passive: true });
+previousScrollY = getPageScrollY();
+window.addEventListener('scroll', updateScrollNavigation, { passive: true });
 
 searchEl.addEventListener('focus', () => document.body.classList.remove('nav-hidden'));
 searchEl.addEventListener('blur', () => {
-  previousScrollY = Math.max(0, window.scrollY || 0);
-  scrollIntent = 0;
+  previousScrollY = getPageScrollY();
+  lastDirectionChangeY = previousScrollY;
+  currentDirection = 0;
 });
-
 document.addEventListener('keydown', event => {
   if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) {
     event.preventDefault();
