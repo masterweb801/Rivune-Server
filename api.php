@@ -4,7 +4,32 @@ require __DIR__ . '/lib/bootstrap.php';
 require_once __DIR__ . '/lib/maintenance.php';
 rivune_maintenance_enforce($pdo, 'json');
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-store');
+header('Cache-Control: public, max-age=15, stale-while-revalidate=30');
+$cacheTtl = 20;
+$cacheDir = __DIR__ . '/storage/cache/library';
+$cacheKey = hash('sha256', json_encode([
+  'q' => trim((string)($_GET['q'] ?? '')),
+  'page' => max(1, (int)($_GET['page'] ?? 1)),
+  'limit' => max(1, min(100, (int)($_GET['limit'] ?? 50))),
+  'sort' => (string)($_GET['sort'] ?? 'popular')
+], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+$cacheFile = $cacheDir . '/' . $cacheKey . '.json';
+$cachedBody = null;
+if (is_dir($cacheDir) || @mkdir($cacheDir, 0755, true)) {
+  if (is_file($cacheFile) && (time() - (int)@filemtime($cacheFile)) <= $cacheTtl) {
+    $cachedBody = @file_get_contents($cacheFile);
+  }
+}
+if (is_string($cachedBody) && $cachedBody !== '') {
+  $etag = '"' . hash('sha256', $cachedBody) . '"';
+  header('ETag: ' . $etag);
+  if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) {
+    http_response_code(304);
+    exit;
+  }
+  echo $cachedBody;
+  exit;
+}
 try {
   $paginated = isset($_GET['limit']) || isset($_GET['page']) || isset($_GET['q']) || isset($_GET['sort']);
   $limit = max(1, min(100, (int)($_GET['limit'] ?? 50)));
@@ -42,5 +67,18 @@ try {
   }
   $response=['tracks'=>$tracks];
   if ($paginated) $response['pagination']=['page'=>$page,'limit'=>$limit,'total'=>$total,'has_more'=>($offset+count($tracks))<$total];
-  echo json_encode($response, JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);
-} catch (Throwable $e) { http_response_code(500); echo json_encode(['error'=>'Unable to load the library.']); }
+  $body = json_encode($response, JSON_UNESCAPED_SLASHES|JSON_INVALID_UTF8_SUBSTITUTE);
+  if (!is_string($body)) throw new RuntimeException('Unable to encode library response.');
+  if (isset($cacheDir) && (is_dir($cacheDir) || @mkdir($cacheDir, 0755, true))) {
+    $temporary = $cacheFile . '.' . bin2hex(random_bytes(4)) . '.tmp';
+    if (@file_put_contents($temporary, $body, LOCK_EX) !== false) @rename($temporary, $cacheFile);
+    if (is_file($temporary)) @unlink($temporary);
+  }
+  $etag = '"' . hash('sha256', $body) . '"';
+  header('ETag: ' . $etag);
+  echo $body;
+} catch (Throwable $e) {
+  header('Cache-Control: no-store');
+  http_response_code(500);
+  echo json_encode(['error'=>'Unable to load the library.']);
+}
