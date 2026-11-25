@@ -274,3 +274,13 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
   .hero h1{font-size:clamp(46px,12vw,58px);line-height:1.02;}
   .lead{font-size:14px;line-height:1.7;}
 }
+/* Keep the search field natively touch-focusable in iOS Home Screen apps. */
+.scroll-header.search-open .search{pointer-events:auto;touch-action:manipulation;}
+.scroll-header.search-open .search input{
+  display:block;
+  min-width:0;
+  pointer-events:auto;
+  -webkit-user-select:text;
+  user-select:text;
+  font-size:16px;
+}
