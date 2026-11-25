@@ -18,14 +18,14 @@
   const searchClose=document.getElementById('search-close');
   function clearSearchOnClose(){
     clearTimeout(searchTimer);
-    const needsLibraryReset=searchQuery!==''||lastFetchedQuery!=='';
     search.value='';
-    if(!needsLibraryReset)return;
     searchQuery='';
-    if(activeRequestController)activeRequestController.abort();
+    if(!searchDirty)return;
+    searchDirty=false;
     fetchPage({reset:true});
   }
   function setSearchOpen(open){
+    if(!open)clearSearchOnClose();
     headerOverlay.classList.toggle('search-open',open);
     publicSearch.hidden=!open;
     searchToggle.setAttribute('aria-expanded',open?'true':'false');
@@ -34,7 +34,7 @@
     else{search.blur();}
   }
   searchToggle.addEventListener('click',()=>setSearchOpen(!headerOverlay.classList.contains('search-open')));
-  searchClose.addEventListener('click',()=>{clearSearchOnClose();setSearchOpen(false);});
+  searchClose.addEventListener('click',()=>setSearchOpen(false));
   search.addEventListener('keydown',event=>{if(event.key==='Escape')setSearchOpen(false);});
 
   let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
@@ -131,7 +131,7 @@
     catch(error){console.warn('RIVUNE native bridge message failed',error);return false;}
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
-  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null,lastFetchedQuery='';
+  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',searchDirty=false,sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null,lastFetchedQuery='';
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
     const shown=displayTracks;
@@ -479,7 +479,7 @@
     onNativeStateChanged,
     onNativeError
   };
-  search.addEventListener('input',()=>{searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),350);});
+  search.addEventListener('input',()=>{searchDirty=true;searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),350);});
   $('library-sort').addEventListener('change',event=>{sortMode=event.target.value==='alphabetical'?'alphabetical':'popular';fetchPage({reset:true});});
   $('load-more').addEventListener('click',()=>fetchPage());
   const sentinel=$('load-more-sentinel');
