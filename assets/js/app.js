@@ -7,6 +7,10 @@
   const headerOverlay=document.createElement('div');
   headerOverlay.className='scroll-header';
   headerOverlay.setAttribute('aria-label','Navigation and music search');
+  const headerSpacer=document.createElement('div');
+  headerSpacer.className='top-spacer';
+  headerSpacer.setAttribute('aria-hidden','true');
+  publicTop.before(headerSpacer);
   document.body.prepend(headerOverlay);
   headerOverlay.append(publicTop,publicSearch);
   const searchToggle=document.getElementById('search-toggle');
