@@ -186,8 +186,36 @@
   }
   async function ensureFullLibrary(){
     if(fullLibraryLoaded)return;
-    const response=await fetch('api.php',{headers:{Accept:'application/json'}});if(!response.ok)throw new Error('Could not load full library');
-    const data=await response.json();const activeId=queue[current]?.id==null?null:String(queue[current].id);tracks=Array.isArray(data.tracks)?data.tracks:[];queue=[...tracks];current=activeId===null?-1:queue.findIndex(t=>String(t.id)===activeId);displayTracks=tracks;libraryTotal=tracks.length;hasMore=false;fullLibraryLoaded=true;render();
+    const activeId=queue[current]?.id==null?null:String(queue[current].id);
+    const allTracks=[];
+    const known=new Set();
+    let nextPage=1,total=libraryTotal,more=true;
+    // api.php is paginated (50 by default, 100 max). Fetch every page before
+    // marking the library complete so Shuffle never silently uses page one only.
+    while(more){
+      const params=new URLSearchParams({page:String(nextPage),limit:'100',sort:sortMode});
+      const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'}});
+      if(!response.ok)throw new Error('Could not load full library (page '+nextPage+')');
+      const data=await response.json();
+      const incoming=Array.isArray(data.tracks)?data.tracks:[];
+      incoming.forEach(track=>{const id=String(track.id);if(!known.has(id)){known.add(id);allTracks.push(track);}});
+      total=Number(data.pagination?.total??total??allTracks.length);
+      more=!!data.pagination?.has_more;
+      nextPage++;
+      if(nextPage>1000)throw new Error('Library pagination limit exceeded');
+      if(!data.pagination)more=false;
+    }
+    const stillActive=activeId===null?-1:allTracks.findIndex(t=>String(t.id)===activeId);
+    tracks=allTracks;
+    queue=[...allTracks];
+    current=stillActive;
+    displayTracks=allTracks;
+    libraryTotal=total;
+    hasMore=false;
+    fullLibraryLoaded=true;
+    render();
+    $('library-status').textContent=libraryTotal+' songs loaded';
+    $('load-more').hidden=true;
     if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
   }
   function load(){fetchPage({reset:true});}
