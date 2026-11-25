@@ -67,6 +67,33 @@ const status=document.getElementById('rivune-upload-status');
 const resultBox=document.getElementById('rivune-upload-result');
 const maxFile=Number(picker.dataset.maxFile), maxBatch=Number(picker.dataset.maxBatch), maxFiles=Number(picker.dataset.maxFiles);
 let active=false;
+let uploadAudioContext=null;
+function prepareUploadSound(){
+ try{
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)return;
+  if(!uploadAudioContext)uploadAudioContext=new AudioContextClass();
+  if(uploadAudioContext.state==='suspended')uploadAudioContext.resume();
+ }catch(e){}
+}
+function playUploadSuccessSound(){
+ try{
+  if(!uploadAudioContext)return;
+  if(uploadAudioContext.state==='suspended')uploadAudioContext.resume();
+  const now=uploadAudioContext.currentTime;
+  [[659.25,0],[880,0.14]].forEach(([frequency,offset])=>{
+   const oscillator=uploadAudioContext.createOscillator();
+   const gain=uploadAudioContext.createGain();
+   oscillator.type='sine';
+   oscillator.frequency.value=frequency;
+   gain.gain.setValueAtTime(0.0001,now+offset);
+   gain.gain.exponentialRampToValueAtTime(0.16,now+offset+0.025);
+   gain.gain.exponentialRampToValueAtTime(0.0001,now+offset+0.22);
+   oscillator.connect(gain);gain.connect(uploadAudioContext.destination);
+   oscillator.start(now+offset);oscillator.stop(now+offset+0.24);
+  });
+ }catch(e){}
+}
 function showResult(message,kind){
  const p=document.createElement('p');p.className=kind==='error'?'error':'success';p.textContent=message;resultBox.replaceChildren(p);
 }
@@ -94,7 +121,7 @@ form.addEventListener('submit',function(event){
  if(tooLarge){showResult(tooLarge.name+' exceeds the per-file limit.','error');return;}
  const total=files.reduce((sum,f)=>sum+f.size,0);
  if(total>maxBatch){showResult('The selected files exceed the total batch limit.','error');return;}
- resultBox.replaceChildren();progressWrap.hidden=false;meter.value=0;percent.textContent='0%';status.textContent='Connecting…';setBusy(true);
+ prepareUploadSound();resultBox.replaceChildren();progressWrap.hidden=false;meter.value=0;percent.textContent='0%';status.textContent='Connecting…';setBusy(true);
  const xhr=new XMLHttpRequest();let finished=false;
  xhr.open('POST',form.action,true);xhr.withCredentials=true;xhr.timeout=240000;
  xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
@@ -114,7 +141,7 @@ form.addEventListener('submit',function(event){
   if(data.error){showResult([data.notice,data.error].filter(Boolean).join(' '),'error');}
   else{showResult(data.notice||'Upload completed.','success');}
   setBusy(false);
-  if(data.saved>0){form.reset();status.textContent='Upload saved · preparing background processing…';processQueue();}
+  if(data.saved>0){playUploadSuccessSound();form.reset();status.textContent='Upload saved · preparing background processing…';processQueue();}
   else{status.textContent=data.duplicates>0?'No new files needed saving':'Upload finished';}
  });
  xhr.addEventListener('error',()=>{if(finished)return;finished=true;showResult('The connection was interrupted before the server returned a response. No success has been assumed.','error');status.textContent='Connection interrupted';setBusy(false);});
