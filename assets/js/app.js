@@ -448,7 +448,7 @@
     onNativeStateChanged,
     onNativeError
   };
-  search.addEventListener('input',()=>{searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),250);});
+  search.addEventListener('input',()=>{searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),350);});
   $('library-sort').addEventListener('change',event=>{sortMode=event.target.value==='alphabetical'?'alphabetical':'popular';fetchPage({reset:true});});
   $('load-more').addEventListener('click',()=>fetchPage());
   const sentinel=$('load-more-sentinel');
