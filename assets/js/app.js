@@ -1,35 +1,26 @@
 (() => {
   const audio=document.getElementById('audio'), list=document.getElementById('tracks');
   const search=document.getElementById('search');
-  // Direction-aware public header: navigation and search travel as one unit.
+  // Fixed navigation with an on-demand search overlay.
   const publicTop=document.querySelector('.top');
   const publicSearch=document.querySelector('.search');
   const headerOverlay=document.createElement('div');
   headerOverlay.className='scroll-header';
   headerOverlay.setAttribute('aria-label','Navigation and music search');
-  const headerSpacer=document.createElement('div');
-  headerSpacer.className='top-spacer';
-  headerSpacer.setAttribute('aria-hidden','true');
-  publicTop.before(headerSpacer);
-  const searchSpacer=document.createElement('div');
-  searchSpacer.className='search-spacer';
-  searchSpacer.setAttribute('aria-hidden','true');
-  publicSearch.before(searchSpacer);
   document.body.prepend(headerOverlay);
-  headerOverlay.append(publicTop);
-
-  // Keep search in its natural library position at the top of the page.
-  // Only bring the real search field into the floating header while scrolling up.
-  let searchInOverlay=false;
-  function moveSearchToOverlay(visible){
-    if(visible&&!searchInOverlay){
-      headerOverlay.append(publicSearch);
-      searchInOverlay=true;
-    }else if(!visible&&searchInOverlay){
-      searchSpacer.after(publicSearch);
-      searchInOverlay=false;
-    }
+  headerOverlay.append(publicTop,publicSearch);
+  const searchToggle=document.getElementById('search-toggle');
+  const searchClose=document.getElementById('search-close');
+  function setSearchOpen(open){
+    headerOverlay.classList.toggle('search-open',open);
+    searchToggle.setAttribute('aria-expanded',open?'true':'false');
+    searchToggle.setAttribute('aria-label',open?'Close search':'Open search');
+    if(open){document.body.classList.remove('nav-hidden');search.focus();}
+    else{search.blur();}
   }
+  searchToggle.addEventListener('click',()=>setSearchOpen(!headerOverlay.classList.contains('search-open')));
+  searchClose.addEventListener('click',()=>setSearchOpen(false));
+  search.addEventListener('keydown',event=>{if(event.key==='Escape')setSearchOpen(false);});
 
   let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
   let directionTravel=0;
@@ -38,15 +29,14 @@
     const currentPageY=window.pageYOffset||document.documentElement.scrollTop||document.body.scrollTop||0;
     const delta=currentPageY-previousPageY;
     previousPageY=currentPageY;
+    if(headerOverlay.classList.contains('search-open')){document.body.classList.remove('nav-hidden');directionTravel=0;return;}
     if(document.body.classList.contains('player-expanded')){
       document.body.classList.remove('nav-hidden');
-      moveSearchToOverlay(false);
       directionTravel=0;
       return;
     }
     if(currentPageY<=20){
       document.body.classList.remove('nav-hidden');
-      moveSearchToOverlay(false);
       directionTravel=0;
       return;
     }
@@ -54,10 +44,8 @@
     directionTravel= Math.sign(directionTravel)===Math.sign(delta) ? directionTravel+delta : delta;
     if(directionTravel>=directionThreshold){
       document.body.classList.add('nav-hidden');
-      moveSearchToOverlay(false);
       directionTravel=0;
     }else if(directionTravel<=-directionThreshold){
-      moveSearchToOverlay(true);
       document.body.classList.remove('nav-hidden');
       directionTravel=0;
     }
@@ -274,7 +262,6 @@
     document.body.classList.toggle('player-expanded',open);
     if(open){
       document.body.classList.remove('nav-hidden');
-      moveSearchToOverlay(false);
       directionTravel=0;
     }
   }
