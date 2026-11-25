@@ -32,10 +32,26 @@ if ($start > 0 && fseek($fp,$start) !== 0) { fclose($fp); http_response_code(500
 $remaining=$length;
 // Larger reads reduce PHP loop/flush overhead while preserving exact Range boundaries.
 $chunkSize=262144;
-while ($remaining>0 && !feof($fp)) {
+$emptyReads=0;
+while ($remaining>0) {
+  if (connection_aborted()) break;
   $chunk=fread($fp,min($chunkSize,$remaining));
-  if ($chunk===false || $chunk==='') break;
+  if ($chunk===false) {
+    error_log('RIVUNE stream read failed for track '.$id.' with '.$remaining.' bytes remaining');
+    break;
+  }
+  if ($chunk==='') {
+    if (feof($fp)) break;
+    // Retry transient empty reads instead of silently truncating the response.
+    if (++$emptyReads<=5) { usleep(10000); continue; }
+    error_log('RIVUNE stream stalled reading track '.$id.' with '.$remaining.' bytes remaining');
+    break;
+  }
+  $emptyReads=0;
   echo $chunk;
   $remaining-=strlen($chunk);
+}
+if ($remaining>0 && !connection_aborted()) {
+  error_log('RIVUNE stream ended short for track '.$id.': '.$remaining.' of '.$length.' response bytes were not read');
 }
 fclose($fp);
