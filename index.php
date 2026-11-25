@@ -48,5 +48,5 @@ rivune_maintenance_enforce($pdo, 'html');
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=search-cache-failure-log-1" defer></script>
+<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=playback-logs-search-cache-2" defer></script>
 </body></html>
