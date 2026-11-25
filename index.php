@@ -10,10 +10,10 @@ rivune_maintenance_enforce($pdo, 'html');
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
 <title>RIVUNE | Music Without Boundaries</title><link rel="icon" type="image/png" href="public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=signature-nav-1">
 <link rel="stylesheet" href="assets/css/app.css?v=scroll-header-2">
-<link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
+<link rel="stylesheet" href="assets/css/controls.css?v=svg-icons-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/library.css?v=library-1">
-<link rel="stylesheet" href="assets/css/player.css?v=playback-modes-1">
+<link rel="stylesheet" href="assets/css/player.css?v=svg-icons-1">
 </head><body>
 <header class="top"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><button id="random-play" class="random-btn" type="button" aria-label="Play a random song"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 14 4 4-4 4"/><path d="M2 18h2.5a6 6 0 0 0 4.7-2.3l5.6-7.4A6 6 0 0 1 19.5 6H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h2.5a6 6 0 0 1 3.2.9"/></svg> <span>Random</span></button><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg></button></div></header>
 <main class="wrap">
@@ -48,5 +48,5 @@ rivune_maintenance_enforce($pdo, 'html');
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=playback-modes-1" defer></script>
+<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=svg-icons-1" defer></script>
 </body></html>
