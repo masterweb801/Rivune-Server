@@ -452,3 +452,60 @@ body.player-expanded .scroll-header{
 @media(max-width:390px){
   .expanded-art{width:min(66vw,32vh,270px);}
 }
+
+
+/* Final mobile proportion pass: larger artwork and a slimmer branded header. */
+:root{--public-nav-height:70px;}
+@media(max-width:500px){
+  :root{--public-nav-height:70px;}
+  .top{
+    min-height:70px!important;
+    height:70px!important;
+    padding:7px 12px!important;
+  }
+  .scroll-header .top{
+    min-height:70px!important;
+    height:70px!important;
+    padding:7px 0!important;
+  }
+  /* Preserve the logo and RIVUNE wordmark size; reduce only the tagline. */
+  .brand small{
+    font-size:7px;
+    line-height:1.25;
+    letter-spacing:.16em;
+    margin-top:3px;
+  }
+  .top-actions{gap:7px;}
+  .random-btn{
+    min-height:34px!important;
+    height:34px;
+    padding:0 10px!important;
+    gap:6px;
+    font-size:10px;
+  }
+  .random-btn .ui-icon{width:17px;height:17px;}
+  .top-actions .icon-btn{
+    flex-basis:36px!important;
+    width:36px!important;
+    min-width:36px!important;
+    max-width:36px!important;
+    height:36px!important;
+    min-height:36px!important;
+    max-height:36px!important;
+  }
+  .top-actions .icon-btn .ui-icon{width:18px;height:18px;}
+  .expanded-player{
+    gap:clamp(9px,1.7vh,15px);
+    padding-top:10px;
+    padding-bottom:12px;
+  }
+  .expanded-content{gap:clamp(10px,1.8vh,15px);}
+  .expanded-art{
+    width:min(76vw,36vh,320px)!important;
+    max-width:100%;
+    flex:0 1 auto;
+  }
+}
+@media(max-width:390px) and (min-height:601px){
+  .expanded-art{width:min(76vw,36vh,320px)!important;}
+}
