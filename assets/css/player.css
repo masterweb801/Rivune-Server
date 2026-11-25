@@ -402,3 +402,9 @@ body.player-expanded .scroll-header{
     padding:9px 0;
   }
 }
+
+/* SVG icon alignment in compact and expanded player controls. */
+.mini-controls .ui-icon,.expanded-controls .ui-icon{width:20px;height:20px;}
+.mini-controls .play .ui-icon,.expanded-controls .play .ui-icon{width:22px;height:22px;}
+.expanded-top .ui-icon{width:20px;height:20px;}
+.collapse-player .ui-icon{width:21px;height:21px;}
