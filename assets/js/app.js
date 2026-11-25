@@ -68,6 +68,27 @@
   let nativeMode=false, nativePlaybackState=null;
   const $=id=>document.getElementById(id);
   const fmt=n=>Number.isFinite(n)&&n>0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
+  const iconPaths={
+    music:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
+    play:'<path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/>',
+    pause:'<path d="M8 5h3v14H8zM15 5h3v14h-3z" fill="currentColor" stroke="none"/>',
+    previous:'<path d="M6 5v14"/><path d="m19 5-10 7 10 7z"/>',
+    next:'<path d="M18 5v14"/><path d="m5 5 10 7-10 7z"/>',
+    repeat:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+    repeatOne:'<path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/><path d="M12 10v5m-1.5-3.5L12 10l1.5 1.5"/>',
+    shuffle:'<path d="m18 14 4 4-4 4"/><path d="M2 18h2.5a6 6 0 0 0 4.7-2.3l5.6-7.4A6 6 0 0 1 19.5 6H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h2.5a6 6 0 0 1 3.2.9"/>',
+    moon:'<path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/>',
+    sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>'
+  };
+  function icon(name,size=20){
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('class','ui-icon');svg.setAttribute('viewBox','0 0 24 24');
+    svg.setAttribute('width',String(size));svg.setAttribute('height',String(size));
+    svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');
+    svg.setAttribute('stroke-width','1.8');svg.setAttribute('stroke-linecap','round');
+    svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+    svg.innerHTML=iconPaths[name]||iconPaths.music;return svg;
+  }
   function setArtwork(element,url,alt,priority=false){
     if(!element)return;
     const normalizedUrl=url?String(url):'';
@@ -76,9 +97,9 @@
     element.replaceChildren();
     if(url){
       const image=document.createElement('img');image.src=String(url);image.alt=alt||'Track artwork';image.loading=priority?'eager':'lazy';image.decoding='async';if(priority)image.fetchPriority='high';
-      image.addEventListener('error',()=>{element.replaceChildren();const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);},{once:true});
+      image.addEventListener('error',()=>{element.replaceChildren();element.append(icon('music',22));},{once:true});
       element.append(image);
-    }else{const fallback=document.createElement('span');fallback.textContent='♫';fallback.setAttribute('aria-hidden','true');element.append(fallback);}
+    }else{element.append(icon('music',22));}
   }
 
   function shuffledCopy(items){
@@ -118,7 +139,7 @@
       const art=document.createElement('span');art.className='track-art';setArtwork(art,t.artwork_url,(t.title||'Track')+' artwork');
       const info=document.createElement('span');info.className='track-meta';const title=document.createElement('strong');title.textContent=String(t.title||'Untitled');
       const sub=document.createElement('small');sub.textContent=String(t.artist||'Unknown artist')+' · '+String(t.album||'Unknown album');
-      const play=document.createElement('span');play.className='track-play';play.textContent='▶';info.append(title,sub);row.append(art,info,play);row.addEventListener('click',()=>playTrack(t));list.append(row);
+      const play=document.createElement('span');play.className='track-play';play.append(icon('play',17));info.append(title,sub);row.append(art,info,play);row.addEventListener('click',()=>playTrack(t));list.append(row);
     });
   }
   async function fetchPage({reset=false}={}){
@@ -181,11 +202,11 @@
     setArtwork($('cover'),t?.artwork_url,(t?.title||'Track')+' artwork',true);
     setArtwork($('expanded-art'),t?.artwork_url,(t?.title||'Track')+' artwork',true);
     $('expanded-title').textContent=t?.title||'Nothing playing';$('expanded-artist').textContent=t?.artist||'Choose a track';
-    $('toggle').textContent=playing?'Ⅱ':'▶';$('expanded-toggle').textContent=playing?'Ⅱ':'▶';
+    $('toggle').replaceChildren(icon(playing?'pause':'play',20));$('expanded-toggle').replaceChildren(icon(playing?'pause':'play',22));
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
     const modeButton=$('expanded-shuffle');
-    const modePresentation={'loop-all':{icon:'↻',label:'Loop all'},'loop-one':{icon:'🔂',label:'Loop one'},'shuffle':{icon:'⤨',label:'Shuffle'}}[playbackMode];
-    modeButton.textContent=modePresentation.icon;
+    const modePresentation={'loop-all':{icon:'repeat',label:'Loop all'},'loop-one':{icon:'repeatOne',label:'Loop one'},'shuffle':{icon:'shuffle',label:'Shuffle'}}[playbackMode];
+    modeButton.replaceChildren(icon(modePresentation.icon,20));
     modeButton.setAttribute('aria-label',modePresentation.label);
     modeButton.setAttribute('title',modePresentation.label);
     modeButton.setAttribute('aria-pressed',playbackMode==='shuffle'?'true':'false');
@@ -388,6 +409,9 @@
   expanded.addEventListener('pointerup',e=>{if(expandedStart&&e.clientY-expandedStart.y>35){e.preventDefault();setExpanded(false);}expandedStart=null;});
   expanded.addEventListener('pointercancel',()=>{expandedStart=null;});
   const saved=localStorage.getItem('rivune-theme');if(saved==='light')document.documentElement.dataset.theme='light';
-  $('theme').addEventListener('click',()=>{const v=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=v;localStorage.setItem('rivune-theme',v);});
+  const themeButton=$('theme');
+  function syncThemeIcon(){const light=document.documentElement.dataset.theme==='light';themeButton.replaceChildren(icon(light?'sun':'moon',19));themeButton.setAttribute('aria-label',light?'Switch to dark theme':'Switch to light theme');}
+  syncThemeIcon();
+  themeButton.addEventListener('click',()=>{const v=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=v;localStorage.setItem('rivune-theme',v);syncThemeIcon();});
   load();updateTimeline();
 })();
