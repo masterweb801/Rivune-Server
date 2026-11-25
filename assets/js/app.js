@@ -128,7 +128,7 @@
     catch(error){console.warn('RIVUNE native bridge message failed',error);return false;}
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
-  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null;
+  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null;
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
     const source=searchQuery?displayTracks:tracks,shown=source;
@@ -157,7 +157,7 @@
     loadingPage=true;$('load-more').hidden=true;
     if(reset){page=1;hasMore=false;displayTracks=[];if(!searchQuery)tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
     try{
-      const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:'popular'});
+      const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:sortMode});
       const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
       if(!response.ok)throw new Error('Library request failed (HTTP '+response.status+')');
       const data=await response.json();
@@ -377,6 +377,7 @@
     onNativeError
   };
   search.addEventListener('input',()=>{searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),250);});
+  $('library-sort').addEventListener('change',event=>{sortMode=event.target.value==='alphabetical'?'alphabetical':'popular';fetchPage({reset:true});});
   $('load-more').addEventListener('click',()=>fetchPage());
   const sentinel=$('load-more-sentinel');
   if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)&&hasMore&&!loadingPage)fetchPage();},{rootMargin:'700px 0px'});observer.observe(sentinel);}
