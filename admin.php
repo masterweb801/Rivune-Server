@@ -1,155 +1,18 @@
 <?php
 declare(strict_types=1);
-require_once __DIR__.'/lib/upload_diagnostics.php';
-$earlyAjaxUpload = (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') && ((string)($_GET['ajax_upload'] ?? '') === '1' || (string)($_POST['ajax_upload'] ?? '') === '1');
-$earlyUploadRequestId = '';
-if ($earlyAjaxUpload) {
-  try { $earlyUploadRequestId = bin2hex(random_bytes(6)); } catch (Throwable $e) { $earlyUploadRequestId = substr(sha1(uniqid('', true)), 0, 12); }
-  rivune_upload_diag($earlyUploadRequestId, 'script_entered', ['content_length'=>(int)($_SERVER['CONTENT_LENGTH'] ?? 0), 'max_input_time'=>ini_get('max_input_time'), 'max_execution_time'=>ini_get('max_execution_time'), 'memory_limit'=>ini_get('memory_limit')]);
-}
 require __DIR__.'/lib/bootstrap.php';
-require_once __DIR__.'/lib/upload_limits.php';
 require_once __DIR__.'/lib/admin_center.php';
 require_once __DIR__.'/lib/admin_logs.php';
 require_once __DIR__.'/lib/admin_alerts.php';
 require_once __DIR__.'/lib/admin_auth.php';
-require_once __DIR__.'/lib/track_processing.php';
 header('Cache-Control: no-store, private, max-age=0');
 header('Pragma: no-cache');
 if (!isset($pdo)) { header('Location: install.php'); exit; }
 
 // Hash column is provisioned during installation; legacy hashes are not backfilled on page startup.
 
-// Detect real MPEG audio frames instead of relying on the hosting server's MIME label.
-function rivune_is_mp3(string $path): bool {
-  $fp = @fopen($path, 'rb');
-  if (!$fp) return false;
-
-  // Skip the complete ID3v2 tag before scanning for MPEG frames. Reading only
-  // the first megabyte can reject valid MP3s with large embedded cover art.
-  $header = fread($fp, 10);
-  if ($header === false) { fclose($fp); return false; }
-  if (strlen($header) >= 3 && substr($header, 0, 3) === 'ID3') {
-    if (strlen($header) !== 10 || !in_array(ord($header[3]), [2,3,4], true)) {
-      fclose($fp);
-      return false;
-    }
-    $tagSize = 0;
-    for ($i = 6; $i < 10; $i++) {
-      $byte = ord($header[$i]);
-      if (($byte & 0x80) !== 0) { fclose($fp); return false; }
-      $tagSize = ($tagSize << 7) | $byte;
-    }
-    if (fseek($fp, 10 + $tagSize, SEEK_SET) !== 0) { fclose($fp); return false; }
-  } else {
-    rewind($fp);
-  }
-
-  $data = fread($fp, 1048576);
-  fclose($fp);
-  if ($data === false || strlen($data) < 4) return false;
-  $length = strlen($data);
-  for ($i = 0; $i <= $length - 4; $i++) {
-    $b1 = ord($data[$i]);
-    $b2 = ord($data[$i + 1]);
-    $b3 = ord($data[$i + 2]);
-    if ($b1 !== 0xFF || ($b2 & 0xE0) !== 0xE0) continue;
-    $version = ($b2 >> 3) & 0x03;
-    $layer = ($b2 >> 1) & 0x03;
-    $bitrate = ($b3 >> 4) & 0x0F;
-    $sampleRate = ($b3 >> 2) & 0x03;
-    if ($version !== 0x01 && $layer !== 0 && $bitrate !== 0 && $bitrate !== 0x0F && $sampleRate !== 0x03) return true;
-  }
-  return false;
-}
 $error=''; $notice=(string)($_SESSION['rivune_admin_notice']??''); unset($_SESSION['rivune_admin_notice']); $saved=0; $duplicates=[]; $failed=[]; $search=trim((string)($_GET['q']??''));
 $page=max(1,(int)($_GET['page']??1)); $perPage=25;
-$uploadLimits = rivune_upload_limits();
-$ajaxUploadRequest = ($_SERVER['REQUEST_METHOD'] === 'POST') && ((string)($_GET['ajax_upload'] ?? '') === '1' || (string)($_POST['ajax_upload'] ?? '') === '1');
-if ($ajaxUploadRequest) {
-  // Keep fatal-error output inside the JSON response instead of allowing the
-  // web server to close the connection with an empty/partial response.
-  if (!headers_sent()) { @ini_set('display_errors', '0'); }
-  ob_start();
-  $uploadRequestId = $earlyUploadRequestId !== '' ? $earlyUploadRequestId : bin2hex(random_bytes(6));
-  $uploadStartedAt = microtime(true);
-  rivune_upload_diag($uploadRequestId, 'bootstrap_and_includes_complete', ['upload_max_filesize'=>ini_get('upload_max_filesize'), 'post_max_size'=>ini_get('post_max_size'), 'max_input_time'=>ini_get('max_input_time')]);
-  @set_time_limit(180);
-  set_exception_handler(static function (Throwable $exception) use ($uploadRequestId, $uploadStartedAt): void {
-    rivune_upload_diag($uploadRequestId, 'uncaught_exception', ['elapsed_seconds'=>round(microtime(true)-$uploadStartedAt,2), 'class'=>get_class($exception), 'message'=>$exception->getMessage(), 'line'=>$exception->getLine()]);
-    while (ob_get_level() > 0) { @ob_end_clean(); }
-    if (!headers_sent()) {
-      http_response_code(500);
-      header('Content-Type: application/json; charset=utf-8');
-    }
-    echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The server could not finish processing this upload. Reference: '.$uploadRequestId.'. Please retry with one smaller batch.'], JSON_INVALID_UTF8_SUBSTITUTE);
-    exit;
-  });
-  register_shutdown_function(static function () use ($uploadRequestId, $uploadStartedAt): void {
-    $lastError = error_get_last();
-    $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
-    if (!$lastError || !in_array($lastError['type'], $fatalTypes, true)) return;
-    rivune_upload_diag($uploadRequestId, 'fatal_error', ['elapsed_seconds'=>round(microtime(true)-$uploadStartedAt,2), 'message'=>$lastError['message'], 'line'=>$lastError['line']]);
-    while (ob_get_level() > 0) { @ob_end_clean(); }
-    if (!headers_sent()) {
-      http_response_code(500);
-      header('Content-Type: application/json; charset=utf-8');
-      header('Connection: close');
-      echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The server encountered an internal error while processing this upload. Reference: '.$uploadRequestId.'.']);
-    }
-  });
-}
-// PHP empties $_POST and $_FILES when post_max_size is exceeded. Detect this
-// before CSRF parsing so the AJAX client receives a useful JSON response.
-if ($ajaxUploadRequest) {
-  require_admin();
-  rivune_upload_diag($uploadRequestId, 'ajax_authentication_passed');
-  $requestBytes = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
-  $postLimitBytes = rivune_ini_size_bytes(ini_get('post_max_size'));
-  if ($postLimitBytes > 0 && $requestBytes > $postLimitBytes) {
-    while (ob_get_level() > 0) { @ob_end_clean(); }
-    http_response_code(413);
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The upload batch exceeds this server’s PHP request-size limit. Select fewer or smaller files.']);
-    exit;
-  }
-  // Safe diagnostic mode: receive the same mp3[] field at admin.php, but never
-  // move, hash, insert, or otherwise save the uploaded file.
-  if ((string)($_GET['upload_probe'] ?? '') === '1') {
-    if (isset($_POST['csrf'])) csrf_check();
-    $probeBatch = $_FILES['mp3'] ?? null;
-    $probeNames = is_array($probeBatch['name'] ?? null) ? $probeBatch['name'] : [];
-    $probeSizes = is_array($probeBatch['size'] ?? null) ? $probeBatch['size'] : [];
-    $probeErrors = is_array($probeBatch['error'] ?? null) ? $probeBatch['error'] : [];
-    $probeFiles = [];
-    foreach ($probeNames as $i => $probeName) {
-      $probeTmp = (string)($probeBatch['tmp_name'][$i] ?? '');
-      $probeFiles[] = [
-        'name' => basename((string)$probeName),
-        'bytes' => (int)($probeSizes[$i] ?? 0),
-        'upload_error' => (int)($probeErrors[$i] ?? UPLOAD_ERR_NO_FILE),
-        'is_uploaded_file' => $probeTmp !== '' && is_uploaded_file($probeTmp),
-      ];
-    }
-    rivune_upload_diag($uploadRequestId, 'admin_endpoint_probe_complete', [
-      'file_count' => count($probeFiles),
-      'total_file_bytes' => array_sum(array_map(static fn($f) => $f['bytes'], $probeFiles)),
-      'post_fields' => count($_POST),
-    ]);
-    while (ob_get_level() > 0) { @ob_end_clean(); }
-    header('Content-Type: application/json; charset=utf-8');
-    echo json_encode([
-      'ok' => count($probeFiles) > 0 && !array_filter($probeFiles, static fn($f) => !$f['is_uploaded_file'] || $f['upload_error'] !== UPLOAD_ERR_OK),
-      'received' => count($probeFiles) > 0,
-      'content_length' => $requestBytes,
-      'files' => $probeFiles,
-      'post_fields_received' => count($_POST),
-      'message' => 'Diagnostic only: no file was saved and no song/database record was created.',
-      'request_id' => $uploadRequestId,
-    ], JSON_INVALID_UTF8_SUBSTITUTE);
-    exit;
-  }
-}
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
   if ($action==='login') {
