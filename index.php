@@ -17,7 +17,7 @@ rivune_maintenance_enforce($pdo, 'html');
 <link rel="icon" type="image/png" href="/public/assets/rivune-logo.png">
 <link rel="apple-touch-icon" href="/public/assets/rivune-logo.png">
 <link rel="stylesheet" href="assets/css/tokens.css?v=signature-nav-1">
-<link rel="stylesheet" href="assets/css/app.css?v=ios-standalone-safe-area-1">
+<link rel="stylesheet" href="assets/css/app.css?v=ios-statusbar-reserved-2">
 <link rel="stylesheet" href="assets/css/controls.css?v=svg-icons-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/library.css?v=library-1">
