@@ -76,7 +76,7 @@ $lines = array_slice($lines, -80);
       xhrOutput.textContent = 'Testing the same XHR transport used by Upload Songs…';
       const data = new FormData();
       data.append('csrf', csrf);
-      data.append('action', 'upload_probe');
+      data.append('action', 'upload');
       data.append('ajax_upload', '1');
       data.append('artist', '');
       data.append('album', '');
