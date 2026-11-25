@@ -8,7 +8,15 @@ rivune_maintenance_enforce($pdo, 'html');
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
-<title>RIVUNE | Music Without Boundaries</title><link rel="icon" type="image/png" href="/public/assets/rivune-logo.png"><link rel="apple-touch-icon" href="/public/assets/rivune-logo.png"><link rel="stylesheet" href="assets/css/tokens.css?v=signature-nav-1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RIVUNE">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="application-name" content="RIVUNE">
+<title>RIVUNE | Music Without Boundaries</title>
+<link rel="manifest" href="/site.webmanifest">
+<link rel="icon" type="image/png" href="/public/assets/rivune-logo.png">
+<link rel="apple-touch-icon" href="/public/assets/rivune-logo.png">
+<link rel="stylesheet" href="assets/css/tokens.css?v=signature-nav-1">
 <link rel="stylesheet" href="assets/css/app.css?v=ios-layout-nav-fix-2">
 <link rel="stylesheet" href="assets/css/controls.css?v=svg-icons-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
