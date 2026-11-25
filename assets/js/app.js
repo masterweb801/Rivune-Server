@@ -17,9 +17,11 @@
   const searchToggle=document.getElementById('search-toggle');
   const searchClose=document.getElementById('search-close');
   function clearSearchOnClose(){
-    search.value='';
-    searchQuery='';
     clearTimeout(searchTimer);
+    const needsLibraryReset=searchQuery!==''||lastFetchedQuery!=='';
+    search.value='';
+    if(!needsLibraryReset)return;
+    searchQuery='';
     if(activeRequestController)activeRequestController.abort();
     fetchPage({reset:true});
   }
@@ -129,7 +131,7 @@
     catch(error){console.warn('RIVUNE native bridge message failed',error);return false;}
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
-  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null;
+  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null,lastFetchedQuery='';
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
     const shown=displayTracks;
@@ -157,12 +159,14 @@
     activeRequestController=controller;
     loadingPage=true;$('load-more').hidden=true;
     if(reset){page=1;hasMore=false;displayTracks=[];if(!searchQuery)tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
+    const requestedQuery=searchQuery;
     try{
       const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:sortMode});
       const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
       if(!response.ok)throw new Error('Library request failed (HTTP '+response.status+')');
       const data=await response.json();
       if(requestId!==requestSequence)return;
+      lastFetchedQuery=requestedQuery;
       if(nativeMode){await ensureFullLibrary();return;}
       const incoming=Array.isArray(data.tracks)?data.tracks:[];
       if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
