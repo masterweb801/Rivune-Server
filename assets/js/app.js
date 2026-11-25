@@ -26,7 +26,7 @@
     headerOverlay.classList.toggle('search-open',open);
     searchToggle.setAttribute('aria-expanded',open?'true':'false');
     searchToggle.setAttribute('aria-label',open?'Close search':'Open search');
-    if(open){document.body.classList.remove('nav-hidden');search.focus();}
+    if(open){document.body.classList.remove('nav-hidden');}
     else{search.blur();}
   }
   searchToggle.addEventListener('click',()=>setSearchOpen(!headerOverlay.classList.contains('search-open')));
