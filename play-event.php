@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['event'] ?? '') ===
     if ($title === false) { http_response_code(404); echo json_encode(['error'=>'Track not found.']); exit; }
     $details = 'Track #'.(int)$trackId.' "'.substr((string)$title,0,80).'" · '.$reason
       .' · position '.($position===false?'unknown':(int)$position).'s'
-      .' / duration '.($duration===false?'unknown':(int)$duration).'s';
+      .' / duration '.($duration===false?'unknown':(int)$duration).'s · recovery attempts exhausted';
     $logged = rivune_admin_log($pdo, 'playback_error', 'warning', $details);
     echo json_encode(['ok'=>$logged]);
   } catch (Throwable $e) {
