@@ -3,12 +3,7 @@ declare(strict_types=1);
 
 // Dedicated RIVUNE upload endpoint. This endpoint intentionally does not load
 // the admin dashboard or song-list rendering code.
-require_once __DIR__ . '/lib/upload_diagnostics.php';
 $requestId = bin2hex(random_bytes(6));
-rivune_upload_diag($requestId, 'dedicated_upload_entered', [
-    'content_length' => (int)($_SERVER['CONTENT_LENGTH'] ?? 0),
-    'method' => $_SERVER['REQUEST_METHOD'] ?? '',
-]);
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, private, max-age=0');
 header('X-Content-Type-Options: nosniff');
@@ -74,7 +69,6 @@ try {
     csrf_check();
 
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
-    rivune_upload_diag($requestId, 'dedicated_auth_and_csrf_passed');
 
     $limits = rivune_upload_limits();
     $batch = $_FILES['mp3'] ?? null;
@@ -166,7 +160,6 @@ try {
         if ($failed) rivune_alert_raise($pdo, 'upload_failure', 'warning', 'One or more uploads failed', count($failed).' file(s) failed in the latest upload batch.');
         if ($duplicates) rivune_alert_raise($pdo, 'upload_duplicate', 'info', 'Duplicate music was skipped', $duplicates.' identical file(s) were skipped by SHA-256 detection.');
     }
-    rivune_upload_diag($requestId, 'dedicated_upload_finished', ['saved'=>$saved,'duplicates'=>$duplicates,'failed'=>count($failed)]);
     upload_reply([
         'ok' => $saved > 0 || ($duplicates > 0 && !$failed),
         'saved' => $saved,
@@ -176,7 +169,6 @@ try {
         'request_id' => $requestId
     ]);
 } catch (Throwable $e) {
-    rivune_upload_diag($requestId, 'dedicated_upload_exception', ['class'=>get_class($e),'message'=>$e->getMessage(),'line'=>$e->getLine()]);
     error_log('[RIVUNE dedicated upload '.$requestId.'] '.$e->getMessage());
     upload_reply(['ok'=>false,'saved'=>0,'duplicates'=>0,'error'=>'The upload could not be completed. Reference: '.$requestId.'.'], 500);
 }
