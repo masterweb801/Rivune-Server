@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/admin_logs.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
@@ -32,6 +33,40 @@ function rivune_play_event_allow(PDO $pdo, string $identity): array {
     'allowed' => $count <= 120,
     'retry_after' => max(1, 600 - (time() - $started))
   ];
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['event'] ?? '') === 'playback_error') {
+  $trackId = filter_var($_POST['track_id'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+  $reasonValue = $_POST['reason'] ?? '';
+  $reason = is_string($reasonValue) ? preg_replace('/[^a-zA-Z0-9 _.-]/', '', $reasonValue) : '';
+  $position = filter_var($_POST['position_seconds'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>0,'max_range'=>86400]]);
+  $duration = filter_var($_POST['duration_seconds'] ?? null, FILTER_VALIDATE_INT, ['options'=>['min_range'=>0,'max_range'=>86400]]);
+  if (!$trackId || !in_array($reason, ['early_end','media_error','recovery_failed','stream_stalled'], true)) {
+    http_response_code(400); echo json_encode(['error'=>'Invalid playback report.']); exit;
+  }
+  try {
+    $secret = (string)($config['admin_pass_hash'] ?? '');
+    if ($secret === '') throw new RuntimeException('Rate-limit secret unavailable.');
+    $address = (string)($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $identity = hash_hmac('sha256', 'playback-error:'.$address, $secret);
+    $limit = rivune_play_event_allow($pdo, $identity);
+    if (!$limit['allowed']) {
+      http_response_code(429); header('Retry-After: '.(int)$limit['retry_after']);
+      echo json_encode(['error'=>'Playback reports are temporarily rate-limited.']); exit;
+    }
+    $track = $pdo->prepare('SELECT title FROM tracks WHERE id=? LIMIT 1');
+    $track->execute([$trackId]);
+    $title = $track->fetchColumn();
+    if ($title === false) { http_response_code(404); echo json_encode(['error'=>'Track not found.']); exit; }
+    $details = 'Track #'.(int)$trackId.' "'.substr((string)$title,0,80).'" · '.$reason
+      .' · position '.($position===false?'unknown':(int)$position).'s'
+      .' / duration '.($duration===false?'unknown':(int)$duration).'s';
+    $logged = rivune_admin_log($pdo, 'playback_error', 'warning', $details);
+    echo json_encode(['ok'=>$logged]);
+  } catch (Throwable $e) {
+    http_response_code(503); echo json_encode(['error'=>'Playback report unavailable.']);
+  }
+  exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
