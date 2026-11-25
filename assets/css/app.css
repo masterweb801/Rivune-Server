@@ -284,3 +284,23 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
   user-select:text;
   font-size:16px;
 }
+
+/* iOS Home Screen: search must replace (not follow) the navigation row. */
+.scroll-header.search-open .search{
+  display:flex!important;
+  position:fixed!important;
+  top:0!important;
+  left:0!important;
+  right:0!important;
+  width:100%!important;
+  height:70px!important;
+  min-height:70px!important;
+  margin:0!important;
+  padding:0 14px!important;
+  z-index:60!important;
+  border:1px solid var(--line)!important;
+  border-radius:0 0 18px 18px!important;
+  background:var(--surface)!important;
+  pointer-events:auto!important;
+}
+.scroll-header.search-open .top{visibility:hidden!important;}
