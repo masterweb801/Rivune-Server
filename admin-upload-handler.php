@@ -17,7 +17,7 @@ header('X-Content-Type-Options: nosniff');
 ignore_user_abort(true);
 ob_start();
 
-function upload_reply(array $data, int $status = 200): never {
+function upload_reply(array $data, int $status = 200): void {
     while (ob_get_level() > 0) { @ob_end_clean(); }
     http_response_code($status);
     echo json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE);
@@ -63,13 +63,15 @@ try {
     if (!isset($pdo)) upload_reply(['ok'=>false,'error'=>'RIVUNE is not installed.'], 503);
     if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') upload_reply(['ok'=>false,'error'=>'POST required.'], 405);
     require_admin();
-    csrf_check();
 
+    // Check this before CSRF: PHP clears $_POST and $_FILES when post_max_size
+    // is exceeded, so the token is no longer available in that case.
     $contentLength = (int)($_SERVER['CONTENT_LENGTH'] ?? 0);
     $postLimit = rivune_ini_size_bytes(ini_get('post_max_size'));
     if ($postLimit > 0 && $contentLength > $postLimit) {
         upload_reply(['ok'=>false,'error'=>'The selected batch exceeds the server request-size limit.'], 413);
     }
+    csrf_check();
 
     if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
     rivune_upload_diag($requestId, 'dedicated_auth_and_csrf_passed');
