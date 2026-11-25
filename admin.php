@@ -113,6 +113,42 @@ if ($ajaxUploadRequest) {
     echo json_encode(['ok'=>false,'saved'=>0,'duplicates'=>0,'notice'=>'','error'=>'The upload batch exceeds this server’s PHP request-size limit. Select fewer or smaller files.']);
     exit;
   }
+  // Safe diagnostic mode: receive the same mp3[] field at admin.php, but never
+  // move, hash, insert, or otherwise save the uploaded file.
+  if ((string)($_GET['upload_probe'] ?? '') === '1') {
+    if (isset($_POST['csrf'])) csrf_check();
+    $probeBatch = $_FILES['mp3'] ?? null;
+    $probeNames = is_array($probeBatch['name'] ?? null) ? $probeBatch['name'] : [];
+    $probeSizes = is_array($probeBatch['size'] ?? null) ? $probeBatch['size'] : [];
+    $probeErrors = is_array($probeBatch['error'] ?? null) ? $probeBatch['error'] : [];
+    $probeFiles = [];
+    foreach ($probeNames as $i => $probeName) {
+      $probeTmp = (string)($probeBatch['tmp_name'][$i] ?? '');
+      $probeFiles[] = [
+        'name' => basename((string)$probeName),
+        'bytes' => (int)($probeSizes[$i] ?? 0),
+        'upload_error' => (int)($probeErrors[$i] ?? UPLOAD_ERR_NO_FILE),
+        'is_uploaded_file' => $probeTmp !== '' && is_uploaded_file($probeTmp),
+      ];
+    }
+    rivune_upload_diag($uploadRequestId, 'admin_endpoint_probe_complete', [
+      'file_count' => count($probeFiles),
+      'total_file_bytes' => array_sum(array_map(static fn($f) => $f['bytes'], $probeFiles)),
+      'post_fields' => count($_POST),
+    ]);
+    while (ob_get_level() > 0) { @ob_end_clean(); }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+      'ok' => count($probeFiles) > 0 && !array_filter($probeFiles, static fn($f) => !$f['is_uploaded_file'] || $f['upload_error'] !== UPLOAD_ERR_OK),
+      'received' => count($probeFiles) > 0,
+      'content_length' => $requestBytes,
+      'files' => $probeFiles,
+      'post_fields_received' => count($_POST),
+      'message' => 'Diagnostic only: no file was saved and no song/database record was created.',
+      'request_id' => $uploadRequestId,
+    ], JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+  }
 }
 if ($_SERVER['REQUEST_METHOD']==='POST') {
   csrf_check(); $action=$_POST['action']??'';
