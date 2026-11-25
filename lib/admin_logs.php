@@ -32,7 +32,7 @@ function rivune_admin_logs_ensure(PDO $pdo): bool {
 function rivune_admin_log(PDO $pdo, string $event, string $status, string $message): bool {
   if (!rivune_admin_logs_ensure($pdo)) return false;
   try {
-    $allowedEvents = ['login','logout','upload','delete','artwork','integrity_scan','backup','restore','maintenance','alert'];
+    $allowedEvents = ['login','logout','upload','delete','artwork','integrity_scan','backup','restore','maintenance','alert','playback_error'];
     $allowedStatuses = ['success','failure','warning','info'];
     if (!in_array($event, $allowedEvents, true)) $event = 'admin_action';
     if (!in_array($status, $allowedStatuses, true)) $status = 'info';
