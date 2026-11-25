@@ -7,7 +7,7 @@ require_admin();
 // Initialize the audit table without recording page views as activity.
 rivune_admin_logs_ensure($pdo);
 
-$allowedEvents = ['all','login','logout','upload','delete','integrity_scan','backup','restore','maintenance','alert','admin_action'];
+$allowedEvents = ['all','login','logout','upload','delete','integrity_scan','backup','restore','maintenance','alert','playback_error','admin_action'];
 $allowedStatuses = ['all','success','failure','warning','info'];
 $event = (string)($_GET['event'] ?? 'all');
 $status = (string)($_GET['status'] ?? 'all');
