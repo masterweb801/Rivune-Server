@@ -332,3 +332,17 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
 /* The hidden attribute is the source of truth for the collapsed search overlay. */
 .scroll-header .search[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
 .scroll-header.search-open .search:not([hidden]){display:flex!important;visibility:visible!important;pointer-events:auto!important;}
+
+/* Match the search replacement to the exact mobile navbar footprint. */
+@media(max-width:500px){
+  .scroll-header{height:66px!important;min-height:66px!important;padding:0!important;}
+  .scroll-header .top{width:100%!important;height:66px!important;min-height:66px!important;padding-inline:14px!important;margin:0!important;}
+  .scroll-header .search,
+  .scroll-header.search-open .search:not([hidden]){
+    position:absolute!important;top:0!important;left:14px!important;right:14px!important;
+    width:auto!important;height:66px!important;min-height:66px!important;
+    margin:0!important;padding:0 14px!important;
+    border:1px solid var(--line)!important;border-radius:18px!important;
+    background:var(--surface)!important;
+  }
+}
