@@ -28,8 +28,8 @@ RIVUNE is a PHP/MySQL MP3 streaming website. The public can browse and listen wi
 
 ## Uploading music
 - Open `https://your-domain.example/admin.php`, sign in, choose multiple MP3 files in the file picker, then upload them together.
-- Each file is limited to 25 MB by the application. PHP/hosting limits also apply: set `upload_max_filesize` to at least `25M`, `post_max_size` higher than the combined batch size (for example `256M`), and `max_file_uploads` high enough for your batch (for example `100`).
-- If the host has a lower total request limit, upload fewer files per batch.
+- The current InfinityFree deployment intentionally caps each MP3 at 9 MB and each batch at 18 MB. Runtime PHP settings can reduce these caps further; the upload page displays the effective limits and validates each selection before sending it.
+- InfinityFree documents a 10 MB per-file storage ceiling and a PHP upload ceiling. Do not advertise or attempt 25 MB uploads on this host. If migrating to another host, verify its persistent file-size, `upload_max_filesize`, `post_max_size`, `max_input_time`, and `max_file_uploads` limits before increasing the application caps.
 - Titles come from filenames. Optional artist and album fields are shared by all files in that batch.
 
 ## Updating the website without losing songs
@@ -51,4 +51,4 @@ The Git repository ignores `storage/config.php` and uploaded music, so normal Gi
 - Do not commit `storage/config.php`, database dumps, or uploaded music to Git.
 
 ## Project status
-The `dev` branch is the active PHP website implementation. The old Node.js/LAN discovery files remain in the repository but are not used by this PHP entry point. The `main` branch has not been changed.
+The `dev` branch is the active PHP website implementation. The obsolete Node.js/LAN discovery server and legacy static frontend have been removed; the public site is served by the root PHP entry point. The `main` branch has not been changed.

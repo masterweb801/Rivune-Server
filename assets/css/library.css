@@ -1,0 +1,11 @@
+/* Public library artwork presentation. */
+.track-art,.cover{overflow:hidden;position:relative;}
+.track-art img,.cover img{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit;}
+.track-art img{aspect-ratio:1;}
+.cover{width:52px;height:52px;}
+.track-art span,.cover span{display:grid;place-items:center;width:100%;height:100%;}
+
+.library-skeleton{display:grid;gap:10px;padding:4px 0 12px}.skeleton-row{display:flex;align-items:center;gap:14px;padding:10px 13px;border:1px solid var(--line);border-radius:13px;background:var(--surface)}
+.skeleton-row>span{width:48px;height:48px;flex:0 0 48px;border-radius:11px;background:var(--raised);animation:rivune-pulse 1.25s ease-in-out infinite}.skeleton-row>div{display:grid;gap:9px;flex:1}
+.skeleton-row i,.skeleton-row b{display:block;height:10px;border-radius:8px;background:var(--raised);animation:rivune-pulse 1.25s ease-in-out infinite}.skeleton-row i{width:min(58%,260px)}.skeleton-row b{width:min(34%,150px);height:8px;opacity:.75}
+@keyframes rivune-pulse{0%,100%{opacity:.5}50%{opacity:1}}.load-more-sentinel{height:1px}.load-more-btn{display:block;width:min(100%,260px);margin:16px auto;min-height:44px}.load-more-btn[hidden]{display:none}.library-status{text-align:center;min-height:18px;margin:10px 0 20px;font-size:11px}

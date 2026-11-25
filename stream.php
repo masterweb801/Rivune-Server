@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
+require_once __DIR__ . '/lib/maintenance.php';
+rivune_maintenance_enforce($pdo, 'text');
 // Streaming is public: release the PHP session lock before sending audio bytes.
 if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
 // Avoid PHP output buffering delaying the first audio bytes.
@@ -10,8 +12,8 @@ $id=filter_input(INPUT_GET,'id',FILTER_VALIDATE_INT);
 if (!$id || $id<1) { http_response_code(400); exit('Invalid track.'); }
 $stmt=$pdo->prepare('SELECT stored_name,original_name FROM tracks WHERE id=?'); $stmt->execute([$id]); $track=$stmt->fetch();
 if (!$track) { http_response_code(404); exit('Track not found.'); }
-$file=__DIR__.'/storage/music/'.$track['stored_name'];
-if (!is_file($file) || !is_readable($file)) { http_response_code(404); exit('Audio file missing.'); }
+$file=rivune_music_storage_path((string)$track['stored_name']);
+if ($file === null || !is_file($file) || !is_readable($file)) { http_response_code(404); exit('Audio file missing.'); }
 $size=filesize($file); if ($size===false || $size<1) { http_response_code(404); exit('Audio file is empty.'); }
 $start=0; $end=$size-1;
 header('Content-Type: audio/mpeg'); header('Accept-Ranges: bytes'); header('Content-Disposition: inline; filename="'.rawurlencode($track['original_name']).'"');
@@ -30,10 +32,26 @@ if ($start > 0 && fseek($fp,$start) !== 0) { fclose($fp); http_response_code(500
 $remaining=$length;
 // Larger reads reduce PHP loop/flush overhead while preserving exact Range boundaries.
 $chunkSize=262144;
-while ($remaining>0 && !feof($fp)) {
+$emptyReads=0;
+while ($remaining>0) {
+  if (connection_aborted()) break;
   $chunk=fread($fp,min($chunkSize,$remaining));
-  if ($chunk===false || $chunk==='') break;
+  if ($chunk===false) {
+    error_log('RIVUNE stream read failed for track '.$id.' with '.$remaining.' bytes remaining');
+    break;
+  }
+  if ($chunk==='') {
+    if (feof($fp)) break;
+    // Retry transient empty reads instead of silently truncating the response.
+    if (++$emptyReads<=5) { usleep(10000); continue; }
+    error_log('RIVUNE stream stalled reading track '.$id.' with '.$remaining.' bytes remaining');
+    break;
+  }
+  $emptyReads=0;
   echo $chunk;
   $remaining-=strlen($chunk);
+}
+if ($remaining>0 && !connection_aborted()) {
+  error_log('RIVUNE stream ended short for track '.$id.': '.$remaining.' of '.$length.' response bytes were not read');
 }
 fclose($fp);
