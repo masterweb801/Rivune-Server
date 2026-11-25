@@ -134,6 +134,45 @@
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
   let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',searchDirty=false,sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null,activeRequestQuery='',lastFetchedQuery='',hasFetchedDefaultPage=false;
+
+  const SEARCH_CACHE_STORAGE_KEY='rivune.search-cache.v1';
+  const SEARCH_CACHE_TTL=3*24*60*60*1000;
+  const SEARCH_CACHE_MAX_ENTRIES=30;
+  function searchCacheEntryKey(query,sort,page){
+    return JSON.stringify([String(query).trim().toLocaleLowerCase(),String(sort),Number(page),50]);
+  }
+  function readSearchCache(query,sort,page){
+    if(!query)return null;
+    try{
+      const now=Date.now();
+      const cache=JSON.parse(localStorage.getItem(SEARCH_CACHE_STORAGE_KEY)||'{}');
+      let changed=false;
+      Object.keys(cache).forEach(key=>{
+        if(!cache[key]||!Number.isFinite(cache[key].savedAt)||now-cache[key].savedAt>SEARCH_CACHE_TTL){
+          delete cache[key];changed=true;
+        }
+      });
+      const key=searchCacheEntryKey(query,sort,page);
+      const entry=cache[key];
+      if(changed)localStorage.setItem(SEARCH_CACHE_STORAGE_KEY,JSON.stringify(cache));
+      return entry&&entry.data?entry.data:null;
+    }catch(_){return null;}
+  }
+  function writeSearchCache(query,sort,page,data){
+    if(!query||!data||!Array.isArray(data.tracks))return;
+    try{
+      const now=Date.now();
+      const cache=JSON.parse(localStorage.getItem(SEARCH_CACHE_STORAGE_KEY)||'{}');
+      Object.keys(cache).forEach(key=>{
+        if(!cache[key]||!Number.isFinite(cache[key].savedAt)||now-cache[key].savedAt>SEARCH_CACHE_TTL)delete cache[key];
+      });
+      cache[searchCacheEntryKey(query,sort,page)]={savedAt:now,data};
+      const entries=Object.entries(cache).sort((a,b)=>b[1].savedAt-a[1].savedAt).slice(0,SEARCH_CACHE_MAX_ENTRIES);
+      localStorage.setItem(SEARCH_CACHE_STORAGE_KEY,JSON.stringify(Object.fromEntries(entries)));
+    }catch(_){
+      try{localStorage.removeItem(SEARCH_CACHE_STORAGE_KEY);}catch(__){}
+    }
+  }
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
     const shown=displayTracks;
@@ -164,10 +203,15 @@
     const requestedQuery=searchQuery;
     activeRequestQuery=requestedQuery;
     try{
-      const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:sortMode});
-      const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
-      if(!response.ok)throw new Error('Library request failed (HTTP '+response.status+')');
-      const data=await response.json();
+      const cachedData=!nativeMode?readSearchCache(requestedQuery,sortMode,page):null;
+      let data=cachedData;
+      if(!data){
+        const params=new URLSearchParams({page:String(page),limit:'50',q:requestedQuery,sort:sortMode});
+        const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
+        if(!response.ok)throw new Error('Library request failed (HTTP '+response.status+')');
+        data=await response.json();
+        if(requestedQuery&&!nativeMode)writeSearchCache(requestedQuery,sortMode,page,data);
+      }
       if(requestId!==requestSequence)return;
       lastFetchedQuery=requestedQuery;
       if(requestedQuery==='')hasFetchedDefaultPage=true;
