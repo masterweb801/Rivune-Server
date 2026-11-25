@@ -22,6 +22,8 @@
     searchQuery='';
     if(!searchDirty)return;
     searchDirty=false;
+    if(searchQuery===''&&activeRequestController&&activeRequestQuery==='')return;
+    if(searchQuery===''&&hasFetchedDefaultPage&&lastFetchedQuery==='')return;
     fetchPage({reset:true});
   }
   function setSearchOpen(open){
@@ -131,7 +133,7 @@
     catch(error){console.warn('RIVUNE native bridge message failed',error);return false;}
   }
   function publishQueue(){sendNative('queueChanged',snapshot());}
-  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',searchDirty=false,sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null,lastFetchedQuery='';
+  let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',searchDirty=false,sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null,activeRequestQuery='',lastFetchedQuery='',hasFetchedDefaultPage=false;
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
     const shown=displayTracks;
@@ -160,6 +162,7 @@
     loadingPage=true;$('load-more').hidden=true;
     if(reset){page=1;hasMore=false;displayTracks=[];if(!searchQuery)tracks=[];skeletonRows(6);}else $('library-status').textContent='Loading more songs…';
     const requestedQuery=searchQuery;
+    activeRequestQuery=requestedQuery;
     try{
       const params=new URLSearchParams({page:String(page),limit:'50',q:searchQuery,sort:sortMode});
       const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
@@ -167,6 +170,7 @@
       const data=await response.json();
       if(requestId!==requestSequence)return;
       lastFetchedQuery=requestedQuery;
+      if(requestedQuery==='')hasFetchedDefaultPage=true;
       if(nativeMode){await ensureFullLibrary();return;}
       const incoming=Array.isArray(data.tracks)?data.tracks:[];
       if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
@@ -187,7 +191,7 @@
       $('library-status').textContent='Could not load songs. Please try again.';$('load-more').hidden=false;
       console.error('RIVUNE library request failed:',error);
     }finally{
-      if(requestId===requestSequence){loadingPage=false;activeRequestController=null;}
+      if(requestId===requestSequence){loadingPage=false;activeRequestController=null;activeRequestQuery='';}
     }
   }
   async function ensureFullLibrary(){
