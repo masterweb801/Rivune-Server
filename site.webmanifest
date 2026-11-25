@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "RIVUNE — Music Without Boundaries",
+  "short_name": "RIVUNE",
+  "description": "Discover and stream music with RIVUNE.",
+  "lang": "en",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone"],
+  "background_color": "#11111d",
+  "theme_color": "#11111d",
+  "icons": [
+    {
+      "src": "/public/assets/rivune-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
