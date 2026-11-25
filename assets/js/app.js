@@ -4,6 +4,7 @@
   // Fixed navigation with an on-demand search overlay.
   const publicTop=document.querySelector('.top');
   const publicSearch=document.querySelector('.search');
+  publicSearch.hidden=true;
   const headerOverlay=document.createElement('div');
   headerOverlay.className='scroll-header';
   headerOverlay.setAttribute('aria-label','Navigation and music search');
@@ -24,6 +25,7 @@
   }
   function setSearchOpen(open){
     headerOverlay.classList.toggle('search-open',open);
+    publicSearch.hidden=!open;
     searchToggle.setAttribute('aria-expanded',open?'true':'false');
     searchToggle.setAttribute('aria-label',open?'Close search':'Open search');
     if(open){document.body.classList.remove('nav-hidden');}
