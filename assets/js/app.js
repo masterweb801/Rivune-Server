@@ -130,7 +130,7 @@
   let page=1,hasMore=false,loadingPage=false,searchTimer=null,searchQuery='',sortMode='popular',libraryTotal=0,fullLibraryLoaded=false,requestSequence=0,activeRequestController=null;
   function skeletonRows(count=5){list.innerHTML=Array.from({length:count},()=>'<div class="skeleton-row" aria-hidden="true"><span></span><div><i></i><b></b></div></div>').join('');}
   function render(){
-    const source=searchQuery?displayTracks:tracks,shown=source;
+    const shown=displayTracks;
     $('count').textContent=(searchQuery?libraryTotal:libraryTotal)+' '+(libraryTotal===1?'track':'tracks');list.replaceChildren();
     if(!shown.length){const p=document.createElement('p');p.className='empty';p.textContent=searchQuery?'No tracks match your search.':(libraryTotal?'No songs loaded yet.':'The library is empty for now. Check back soon.');list.append(p);return;}
     shown.forEach(t=>{
@@ -209,13 +209,10 @@
     tracks=allTracks;
     queue=[...allTracks];
     current=stillActive;
-    displayTracks=allTracks;
+    // Keep the visible list lazy-loaded. Only the playback catalogue/queue
+    // becomes complete; displayTracks remains the pages already rendered.
     libraryTotal=total;
-    hasMore=false;
     fullLibraryLoaded=true;
-    render();
-    $('library-status').textContent=libraryTotal+' songs loaded';
-    $('load-more').hidden=true;
     if(nativeMode){sendNative('libraryChanged',{tracks:tracks.map(track=>({...track}))});publishQueue();}
   }
   function load(){fetchPage({reset:true});}
