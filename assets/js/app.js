@@ -64,7 +64,7 @@
   }
   document.addEventListener('scroll',handlePublicScroll,{passive:true,capture:true});
 
-  let tracks=[], displayTracks=[], queue=[], current=-1, shuffled=false, pointerStart=null;
+  let tracks=[], displayTracks=[], queue=[], current=-1, playbackMode='loop-all', shuffled=false, pointerStart=null;
   let nativeMode=false, nativePlaybackState=null;
   const $=id=>document.getElementById(id);
   const fmt=n=>Number.isFinite(n)&&n>0?Math.floor(n/60)+':'+String(Math.floor(n%60)).padStart(2,'0'):'0:00';
@@ -94,6 +94,7 @@
       queueTrackIds:queue.map(track=>Number(track.id)),
       currentTrackId:t?Number(t.id):null,currentIndex:current,
       shuffleEnabled:shuffled,
+      repeatMode:playbackMode,
       isPlaying:nativeMode?!!nativePlaybackState?.isPlaying:!audio.paused,
       positionMs:nativeMode?Number(nativePlaybackState?.positionMs||0):Math.round((audio.currentTime||0)*1000),
       durationMs:nativeMode?Number(nativePlaybackState?.durationMs||0):Math.round((audio.duration||0)*1000),
@@ -182,8 +183,14 @@
     $('expanded-title').textContent=t?.title||'Nothing playing';$('expanded-artist').textContent=t?.artist||'Choose a track';
     $('toggle').textContent=playing?'Ⅱ':'▶';$('expanded-toggle').textContent=playing?'Ⅱ':'▶';
     $('toggle').setAttribute('aria-label',playing?'Pause':'Play');$('expanded-toggle').setAttribute('aria-label',playing?'Pause':'Play');
-    $('expanded-shuffle').classList.toggle('selected',shuffled);
-    $('expanded-shuffle').setAttribute('aria-pressed',shuffled?'true':'false');
+    const modeButton=$('expanded-shuffle');
+    const modePresentation={'loop-all':{icon:'↻',label:'Loop all'},'loop-one':{icon:'🔂',label:'Loop one'},'shuffle':{icon:'⤨',label:'Shuffle'}}[playbackMode];
+    modeButton.textContent=modePresentation.icon;
+    modeButton.setAttribute('aria-label',modePresentation.label);
+    modeButton.setAttribute('title',modePresentation.label);
+    modeButton.setAttribute('aria-pressed',playbackMode==='shuffle'?'true':'false');
+    modeButton.dataset.mode=playbackMode;
+    modeButton.classList.toggle('selected',playbackMode!=='loop-all');
     updateActiveTrack();
   }
   const listenTracker={trackId:null,lastPositionMs:null,listenedMs:0,playId:null,recorded:false};
@@ -250,14 +257,28 @@
       directionTravel=0;
     }
   }
-  async function toggleShuffle(){
-    if(!fullLibraryLoaded){try{await ensureFullLibrary();}catch(error){console.warn('Full-library shuffle unavailable',error);}}
-    shuffled=!shuffled;const now=queue[current]||null;
-    if(shuffled){const rest=tracks.filter(t=>!now||t.id!==now.id);
-      for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}
-      queue=now?[now,...rest]:rest;current=now?0:-1;}
-    else{queue=[...tracks];current=now?queue.findIndex(t=>t.id===now.id):-1;}
-    if(nativeMode){sendNative('shuffleChanged',{enabled:shuffled});publishQueue();}
+  async function cyclePlaybackMode(){
+    const modes=['loop-all','loop-one','shuffle'];
+    const nextMode=modes[(modes.indexOf(playbackMode)+1)%modes.length];
+    if(nextMode==='shuffle'&&!fullLibraryLoaded){
+      try{await ensureFullLibrary();}catch(error){console.warn('Full-library shuffle unavailable',error);return;}
+    }
+    const now=queue[current]||null;
+    playbackMode=nextMode;
+    shuffled=playbackMode==='shuffle';
+    if(playbackMode==='shuffle'){
+      const rest=shuffledCopy(tracks.filter(track=>!now||String(track.id)!==String(now.id)));
+      queue=now?[now,...rest]:rest;
+      current=now?0:-1;
+    }else{
+      queue=[...tracks];
+      current=now?queue.findIndex(track=>String(track.id)===String(now.id)):-1;
+    }
+    if(nativeMode){
+      sendNative('repeatModeChanged',{mode:playbackMode});
+      sendNative('shuffleChanged',{enabled:shuffled});
+      publishQueue();
+    }
     sync();
   }
   async function playRandom(){
@@ -304,7 +325,13 @@
       current=idx;
     }else if(state.trackId===null){current=-1;}
     else if(Number.isInteger(state.currentIndex)&&state.currentIndex>=0&&state.currentIndex<queue.length){current=state.currentIndex;}
-    if(typeof state.shuffleEnabled==='boolean')shuffled=state.shuffleEnabled;
+    if(typeof state.repeatMode==='string'&&['loop-all','loop-one','shuffle'].includes(state.repeatMode)){
+      playbackMode=state.repeatMode;
+      shuffled=playbackMode==='shuffle';
+    }else if(typeof state.shuffleEnabled==='boolean'){
+      shuffled=state.shuffleEnabled;
+      if(shuffled)playbackMode='shuffle';
+    }
     nativePlaybackState={
       isPlaying:!!state.isPlaying,
       positionMs:Math.max(0,Number(state.positionMs)||0),
@@ -314,7 +341,7 @@
     const activeNativeTrackId=queue[current]?.id==null?null:String(queue[current].id);
     if(activeNativeTrackId&&activeNativeTrackId!==previousNativeTrackId)resetListenTracker(activeNativeTrackId,nativePlaybackState.positionMs);
     accumulateListening(activeNativeTrackId,nativePlaybackState.positionMs,nativePlaybackState.isPlaying);
-    $('expanded-volume').value=String(nativePlaybackState.volume);sync();updateTimeline();return true;
+    sync();updateTimeline();return true;
   }
   function onNativeError(input){
     const message=typeof input==='string'?input:String(input?.message||'Native playback error');
@@ -335,15 +362,19 @@
   $('toggle').addEventListener('click',togglePlayback);$('expanded-toggle').addEventListener('click',togglePlayback);
   $('next').addEventListener('click',next);$('expanded-next').addEventListener('click',next);
   $('prev').addEventListener('click',previous);$('expanded-prev').addEventListener('click',previous);
-  $('expanded-shuffle').addEventListener('click',toggleShuffle);$('random-play').addEventListener('click',playRandom);
+  $('expanded-shuffle').addEventListener('click',cyclePlaybackMode);$('random-play').addEventListener('click',playRandom);
   $('expanded-seek').addEventListener('input',e=>seekTo(e.target.value));
-  $('expanded-volume').addEventListener('input',e=>{
-    const value=Number(e.target.value);
-    if(nativeMode)sendNative('setVolume',{volume:value});else audio.volume=value;
-  });
   audio.volume=.8;
   audio.addEventListener('timeupdate',()=>{const id=queue[current]?.id;accumulateListening(id,audio.currentTime*1000,!audio.paused);updateTimeline();});audio.addEventListener('seeking',()=>{listenTracker.lastPositionMs=audio.currentTime*1000;});audio.addEventListener('seeked',()=>{listenTracker.lastPositionMs=audio.currentTime*1000;});audio.addEventListener('loadedmetadata',updateTimeline);
-  audio.addEventListener('play',()=>{const id=queue[current]?.id;if(id!=null&&listenTracker.trackId!==String(id))resetListenTracker(id,audio.currentTime*1000);sync();});audio.addEventListener('pause',sync);audio.addEventListener('ended',()=>{if(!nativeMode)next();});
+  audio.addEventListener('play',()=>{const id=queue[current]?.id;if(id!=null&&listenTracker.trackId!==String(id))resetListenTracker(id,audio.currentTime*1000);sync();});audio.addEventListener('pause',sync);audio.addEventListener('ended',()=>{
+    if(nativeMode)return;
+    if(playbackMode==='loop-one'){
+      audio.currentTime=0;
+      audio.play().catch(()=>{});
+      return;
+    }
+    next();
+  });
   $('collapse-player').addEventListener('click',()=>setExpanded(false));
   $('mini-now').addEventListener('click',()=>setExpanded(true));
   $('mini-now').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpanded(true);}});
