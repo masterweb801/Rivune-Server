@@ -32,6 +32,10 @@ $lines = array_slice($lines, -80);
   <button type="button" class="secondary" id="multipart-probe-test">Test PHP file reception</button>
 </div>
 <p id="multipart-probe-result" class="muted" role="status">Choose one MP3. This test sends it to the real admin.php endpoint in no-save mode; it does not add a song or change the music database.</p>
+<div class="admin-tool-actions" style="margin:14px 0">
+  <button type="button" class="secondary" id="xhr-probe-test">Test normal XHR transport (no save)</button>
+</div>
+<p id="xhr-probe-result" class="muted" role="status">This reproduces the Upload Songs page's XMLHttpRequest transport without saving the file.</p>
 <script>
 (function () {
   const csrf = <?= json_encode(csrf_token()) ?>;
@@ -59,6 +63,49 @@ $lines = array_slice($lines, -80);
       } finally {
         emptyButton.disabled = false;
       }
+    });
+  }
+
+  const xhrButton = document.getElementById('xhr-probe-test');
+  const xhrOutput = document.getElementById('xhr-probe-result');
+  if (xhrButton && xhrOutput) {
+    xhrButton.addEventListener('click', function () {
+      const file = document.getElementById('multipart-probe-file').files?.[0];
+      if (!file) { xhrOutput.textContent = 'Please choose one MP3 file first.'; return; }
+      xhrButton.disabled = true;
+      xhrOutput.textContent = 'Testing the same XHR transport used by Upload Songs…';
+      const data = new FormData();
+      data.append('csrf', csrf);
+      data.append('action', 'upload_probe');
+      data.append('ajax_upload', '1');
+      data.append('artist', '');
+      data.append('album', '');
+      data.append('mp3[]', file, file.name);
+      const xhr = new XMLHttpRequest();
+      const started = Date.now();
+      let loaded = 0, total = 0;
+      xhr.open('POST', 'admin.php?ajax_upload=1&upload_probe=1', true);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+      xhr.timeout = 180000;
+      xhr.upload.addEventListener('progress', e => { if (e.lengthComputable) { loaded=e.loaded; total=e.total; xhrOutput.textContent='Sending test file… '+Math.round(e.loaded/e.total*100)+'%'; } });
+      xhr.addEventListener('load', () => {
+        xhrOutput.textContent = 'HTTP '+xhr.status+' · '+(xhr.responseText||'').slice(0,700);
+        xhrButton.disabled = false;
+      });
+      xhr.addEventListener('error', () => {
+        xhrOutput.textContent = 'XHR network error (HTTP '+xhr.status+', readyState '+xhr.readyState+', sent '+loaded+'/'+total+' bytes, '+Math.round((Date.now()-started)/1000)+' seconds).';
+        xhrButton.disabled = false;
+      });
+      xhr.addEventListener('timeout', () => {
+        xhrOutput.textContent = 'XHR timed out after '+Math.round((Date.now()-started)/1000)+' seconds.';
+        xhrButton.disabled = false;
+      });
+      xhr.addEventListener('abort', () => {
+        xhrOutput.textContent = 'XHR was aborted.';
+        xhrButton.disabled = false;
+      });
+      xhr.send(data);
     });
   }
 
