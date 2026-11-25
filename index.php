@@ -13,7 +13,7 @@ rivune_maintenance_enforce($pdo, 'html');
 <link rel="stylesheet" href="assets/css/controls.css?v=controls-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/library.css?v=library-1">
-<link rel="stylesheet" href="assets/css/player.css?v=signature-nav-1">
+<link rel="stylesheet" href="assets/css/player.css?v=playback-modes-1">
 </head><body>
 <header class="top"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><button id="random-play" class="random-btn" type="button" aria-label="Play a random song">⚄ <span>Random</span></button><span class="public-tag">PUBLIC LISTENING</span><button id="theme" class="icon-btn" aria-label="Toggle theme">◐</button></div></header>
 <main class="wrap">
@@ -39,15 +39,14 @@ rivune_maintenance_enforce($pdo, 'html');
 
 </aside>
   <section class="expanded-player" id="expanded-player" aria-hidden="true" aria-label="Full screen player">
-    <div class="expanded-top"><button id="collapse-player" class="collapse-player" aria-label="Collapse player">⌄</button><span>NOW PLAYING</span><button id="expanded-shuffle" class="control" aria-label="Shuffle">⤨</button></div>
+    <div class="expanded-top"><button id="collapse-player" class="collapse-player" aria-label="Collapse player">⌄</button><span>NOW PLAYING</span><button id="expanded-shuffle" class="control" aria-label="Loop all" aria-pressed="false">↻</button></div>
     <div class="expanded-content">
       <div class="expanded-art" id="expanded-art"><span aria-hidden="true">♫</span></div>
       <div class="expanded-track"><strong id="expanded-title">Nothing playing</strong><span id="expanded-artist">Choose a track</span></div>
       <div class="expanded-timeline"><time id="expanded-elapsed">0:00</time><input id="expanded-seek" type="range" min="0" max="1000" value="0"><time id="expanded-duration">0:00</time></div>
       <div class="expanded-controls"><button id="expanded-prev" class="control" aria-label="Previous">|◀</button><button id="expanded-toggle" class="play" aria-label="Play">▶</button><button id="expanded-next" class="control" aria-label="Next">▶|</button></div>
-      <label class="expanded-volume">♫ <input id="expanded-volume" type="range" min="0" max="1" step=".01" value=".8"></label>
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=player-nav-lightfix-1" defer></script>
+<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=playback-modes-1" defer></script>
 </body></html>
