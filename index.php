@@ -10,7 +10,7 @@ rivune_maintenance_enforce($pdo, 'html');
 <meta name="theme-color" content="#11111d"><meta name="description" content="RIVUNE — discover and stream music.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="RIVUNE">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="application-name" content="RIVUNE">
 <title>RIVUNE | Music Without Boundaries</title>
 <link rel="manifest" href="/site.webmanifest">
