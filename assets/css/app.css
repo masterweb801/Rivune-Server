@@ -304,3 +304,27 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
   pointer-events:auto!important;
 }
 .scroll-header.search-open .top{visibility:hidden!important;}
+
+/* Search overlay state: hidden by default, visible only after the navbar button is tapped. */
+.scroll-header{display:flex;flex-direction:column;gap:0;padding:0;height:66px;overflow:visible;}
+.scroll-header .search{
+  display:none!important;
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:66px!important;
+  min-height:66px!important;
+  margin:0!important;
+  padding:0 14px!important;
+  z-index:60!important;
+  border:1px solid var(--line)!important;
+  border-radius:0 0 18px 18px!important;
+  background:var(--surface)!important;
+}
+.scroll-header.search-open .search{display:flex!important;}
+.scroll-header.search-open .top{visibility:hidden!important;}
+.scroll-header:not(.search-open) .search{visibility:hidden!important;pointer-events:none!important;}
+@media(min-width:501px){
+  .scroll-header{height:76px;}
+  .scroll-header .search{height:76px!important;min-height:76px!important;}
+}
