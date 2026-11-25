@@ -31,7 +31,7 @@ $lines = array_slice($lines, -80);
   <input type="file" id="multipart-probe-file" accept=".mp3,audio/mpeg">
   <button type="button" class="secondary" id="multipart-probe-test">Test PHP file reception</button>
 </div>
-<p id="multipart-probe-result" class="muted" role="status">Choose one small MP3 (preferably under 1 MB). This separate test checks PHP's multipart file reception only; it does not save the file or add a song.</p>
+<p id="multipart-probe-result" class="muted" role="status">Choose one MP3. This test sends it to the real admin.php endpoint in no-save mode; it does not add a song or change the music database.</p>
 <script>
 (function () {
   const csrf = <?= json_encode(csrf_token()) ?>;
@@ -73,12 +73,14 @@ $lines = array_slice($lines, -80);
       return;
     }
     fileButton.disabled = true;
-    fileOutput.textContent = 'Sending ' + file.name + ' (' + file.size + ' bytes) to the isolated PHP probe…';
+    fileOutput.textContent = 'Sending ' + file.name + ' (' + file.size + ' bytes) to admin.php in no-save mode…';
     const data = new FormData();
     data.append('csrf', csrf);
-    data.append('probe_file', file, file.name);
+    data.append('action', 'upload_probe');
+    data.append('ajax_upload', '1');
+    data.append('mp3[]', file, file.name);
     try {
-      const response = await fetch('admin-upload-probe.php', {
+      const response = await fetch('admin.php?ajax_upload=1&upload_probe=1', {
         method: 'POST',
         credentials: 'same-origin',
         headers: {'X-Requested-With': 'XMLHttpRequest'},
