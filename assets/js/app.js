@@ -15,6 +15,13 @@
   headerOverlay.append(publicTop,publicSearch);
   const searchToggle=document.getElementById('search-toggle');
   const searchClose=document.getElementById('search-close');
+  function clearSearchOnClose(){
+    search.value='';
+    searchQuery='';
+    clearTimeout(searchTimer);
+    if(activeRequestController)activeRequestController.abort();
+    fetchPage({reset:true});
+  }
   function setSearchOpen(open){
     headerOverlay.classList.toggle('search-open',open);
     searchToggle.setAttribute('aria-expanded',open?'true':'false');
@@ -23,7 +30,7 @@
     else{search.blur();}
   }
   searchToggle.addEventListener('click',()=>setSearchOpen(!headerOverlay.classList.contains('search-open')));
-  searchClose.addEventListener('click',()=>setSearchOpen(false));
+  searchClose.addEventListener('click',()=>{clearSearchOnClose();setSearchOpen(false);});
   search.addEventListener('keydown',event=>{if(event.key==='Escape')setSearchOpen(false);});
 
   let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
@@ -241,6 +248,17 @@
     playbackRecovery.trackId=trackId==null?null:String(trackId);
     playbackRecovery.retries=0;
   }
+  function reportPlaybackFailure(track,reason){
+    if(!track||!track.id)return;
+    const payload=new URLSearchParams({
+      event:'playback_error',
+      track_id:String(track.id),
+      reason:reason,
+      position_seconds:String(Math.max(0,Math.floor(Number(audio.currentTime)||0))),
+      duration_seconds:String(Math.max(0,Math.floor(Number(audio.duration)||0)))
+    });
+    fetch('play-event.php',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:payload.toString(),keepalive:true,credentials:'same-origin'}).catch(()=>{});
+  }
   function recoverInterruptedPlayback(reason){
     if(nativeMode)return false;
     const track=queue[current];
@@ -248,6 +266,7 @@
     if(playbackRecovery.trackId!==String(track.id))resetPlaybackRecovery(track.id);
     if(playbackRecovery.advanceTimer)return true;
     if(playbackRecovery.retries>=playbackRecovery.maxRetries){
+      reportPlaybackFailure(track,reason==='stream ended before duration'?'early_end':(reason==='media error'?'media_error':(reason==='stream stalled'?'stream_stalled':'recovery_failed')));
       $('library-status').textContent='Could not continue "'+(track.title||'this song')+'". Moving to the next song…';
       playbackRecovery.advanceTimer=setTimeout(()=>{playbackRecovery.advanceTimer=null;next();},1800);
       return true;
