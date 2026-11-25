@@ -274,3 +274,22 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
   .hero h1{font-size:clamp(46px,12vw,58px);line-height:1.02;}
   .lead{font-size:14px;line-height:1.7;}
 }
+
+/* iOS standalone safe-area: keep the fixed navigation below the system status bar. */
+.scroll-header{
+  top:0;
+  padding-top:env(safe-area-inset-top, 0px);
+}
+.scroll-header .top{flex:0 0 66px;}
+.scroll-header .search{
+  top:env(safe-area-inset-top, 0px);
+  height:66px;
+}
+.top-spacer{height:calc(66px + env(safe-area-inset-top, 0px));}
+@media(min-width:501px){
+  .scroll-header .top{flex-basis:76px;}
+  .scroll-header .search{
+    height:76px;
+  }
+  .top-spacer{height:calc(76px + env(safe-area-inset-top, 0px));}
+}
