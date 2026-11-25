@@ -8,7 +8,7 @@ header('Cache-Control: public, max-age=15, stale-while-revalidate=30');
 $cacheTtl = 20;
 $cacheDir = __DIR__ . '/storage/cache/library';
 $cacheKey = hash('sha256', json_encode([
-  'q' => trim((string)($_GET['q'] ?? '')),
+  'q' => substr(trim((string)($_GET['q'] ?? '')), 0, 100),
   'page' => max(1, (int)($_GET['page'] ?? 1)),
   'limit' => max(1, min(100, (int)($_GET['limit'] ?? 50))),
   'sort' => (string)($_GET['sort'] ?? 'popular')
@@ -35,7 +35,7 @@ try {
   $limit = max(1, min(100, (int)($_GET['limit'] ?? 50)));
   $page = max(1, (int)($_GET['page'] ?? 1));
   $offset = ($page - 1) * $limit;
-  $search = trim((string)($_GET['q'] ?? ''));
+  $search = substr(trim((string)($_GET['q'] ?? '')), 0, 100);
   $sort = (string)($_GET['sort'] ?? 'popular');
   if (!in_array($sort, ['popular','alphabetical','newest'], true)) $sort = 'popular';
   $hasPlayStats = (int)$pdo->query("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='track_plays'")->fetchColumn() > 0;
