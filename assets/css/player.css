@@ -117,7 +117,6 @@ body.player-expanded{overflow:hidden;}
   border-radius:50%;
   padding:0;
 }
-.expanded-timeline input,
 @media(max-height:740px){
   .expanded-player{
     padding-top:max(10px,env(safe-area-inset-top));
@@ -408,3 +407,48 @@ body.player-expanded .scroll-header{
 .mini-controls .play .ui-icon,.expanded-controls .play .ui-icon{width:22px;height:22px;}
 .expanded-top .ui-icon{width:20px;height:20px;}
 .collapse-player .ui-icon{width:21px;height:21px;}
+
+
+/* Compact, viewport-aware expanded player: keep transport controls on-screen on iPhone Safari. */
+.expanded-player{
+  justify-content:flex-start;
+  gap:clamp(12px,2.2vh,22px);
+  padding-top:clamp(10px,2vh,18px);
+  padding-bottom:clamp(12px,2vh,20px);
+}
+.expanded-top{flex:0 0 auto;}
+.expanded-content{
+  flex:1 1 auto;
+  min-height:0;
+  width:min(440px,100%);
+  margin:0;
+  justify-content:center;
+  gap:clamp(12px,2.2vh,22px);
+}
+.expanded-art{
+  width:min(68vw,32vh,300px);
+  max-width:100%;
+  margin:0 auto;
+  flex:0 1 auto;
+}
+.expanded-track strong{font-size:clamp(19px,4.8vw,25px);}
+.expanded-track span{font-size:clamp(13px,3.5vw,16px);}
+.expanded-timeline{flex:0 0 auto;gap:clamp(8px,2vw,12px);}
+.expanded-controls{flex:0 0 auto;gap:clamp(20px,7vw,38px);}
+.expanded-hint{flex:0 0 auto;margin:0;text-align:center;}
+@media(max-height:600px){
+  .expanded-player{gap:8px;padding-top:8px;padding-bottom:8px;}
+  .expanded-content{gap:10px;}
+  .expanded-art{width:min(58vw,27vh,220px);}
+  .expanded-controls .play{
+    width:52px;min-width:52px;max-width:52px;
+    height:52px;min-height:52px;max-height:52px;flex-basis:52px;
+  }
+  .expanded-controls .control{
+    width:40px;min-width:40px;max-width:40px;
+    height:40px;min-height:40px;max-height:40px;flex-basis:40px;
+  }
+}
+@media(max-width:390px){
+  .expanded-art{width:min(66vw,32vh,270px);}
+}
