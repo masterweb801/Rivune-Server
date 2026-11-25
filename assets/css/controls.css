@@ -118,3 +118,8 @@ input[type=range]{
 }
 .admin-pagination a,.admin-track-actions .text-link{padding:0 14px}
 .rivune-nav-logout{padding:0 14px}
+
+/* Consistent inline SVG icon treatment for the public listening interface. */
+.ui-icon{display:block;flex:0 0 auto;pointer-events:none;}
+.search-icon{display:grid;place-items:center;color:var(--muted);}
+.track-play{display:grid;place-items:center;}
