@@ -328,3 +328,7 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
   .scroll-header{height:76px;}
   .scroll-header .search{height:76px!important;min-height:76px!important;}
 }
+
+/* The hidden attribute is the source of truth for the collapsed search overlay. */
+.scroll-header .search[hidden]{display:none!important;visibility:hidden!important;pointer-events:none!important;}
+.scroll-header.search-open .search:not([hidden]){display:flex!important;visibility:visible!important;pointer-events:auto!important;}
