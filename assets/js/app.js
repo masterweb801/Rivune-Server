@@ -32,8 +32,12 @@
     publicSearch.hidden=!open;
     searchToggle.setAttribute('aria-expanded',open?'true':'false');
     searchToggle.setAttribute('aria-label',open?'Close search':'Open search');
-    if(open){document.body.classList.remove('nav-hidden');}
-    else{search.blur();}
+    if(open){
+      document.body.classList.remove('nav-hidden');
+      // Explicitly focus after the overlay is visible so Android WebView opens
+      // the keyboard and accepts text on the first tap.
+      requestAnimationFrame(()=>{if(headerOverlay.classList.contains('search-open'))search.focus({preventScroll:true});});
+    }else{search.blur();}
   }
   searchToggle.addEventListener('click',()=>setSearchOpen(!headerOverlay.classList.contains('search-open')));
   searchClose.addEventListener('click',()=>setSearchOpen(false));
@@ -263,7 +267,9 @@
       if(requestId!==requestSequence)return;
       lastFetchedQuery=requestedQuery;
       if(requestedQuery==='')hasFetchedDefaultPage=true;
-      if(nativeMode){await ensureFullLibrary();return;}
+      // Native Android playback must not bypass the visible API result.
+      // Search and reset requests still need to render the matching page in
+      // the WebView; the native playback catalogue is managed separately.
       const incoming=Array.isArray(data.tracks)?data.tracks:[];
       if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
       if(!searchQuery){
@@ -602,14 +608,73 @@
   $('mini-now').addEventListener('click',()=>setExpanded(true));
   $('mini-now').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpanded(true);}});
   const mini=$('mini-player');
-  mini.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,a,[role="button"],select,textarea')){pointerStart=null;return;}pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId};if(mini.setPointerCapture)mini.setPointerCapture(e.pointerId);});
-  mini.addEventListener('pointerup',e=>{if(!pointerStart)return;const dy=e.clientY-pointerStart.y;pointerStart=null;if(dy < -28){e.preventDefault();setExpanded(true);}});
-  mini.addEventListener('pointercancel',()=>{pointerStart=null;});
+  let miniGesture=null;
+  // Pointer events cover mouse/pen. Touch Events are used separately because
+  // iOS Safari and embedded WebViews can cancel pointer streams inconsistently.
+  mini.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='touch'||!e.isPrimary||e.button!==0||e.target.closest('button,input,a,select,textarea'))return;
+    miniGesture={id:e.pointerId,x:e.clientX,y:e.clientY};
+  });
+  mini.addEventListener('pointermove',e=>{
+    if(e.pointerType==='touch'||!miniGesture||miniGesture.id!==e.pointerId)return;
+    const dx=e.clientX-miniGesture.x,dy=e.clientY-miniGesture.y;
+    if(dy < -24&&Math.abs(dy)>Math.abs(dx)*0.8){miniGesture=null;setExpanded(true);}
+  });
+  const clearMiniGesture=()=>{miniGesture=null;};
+  mini.addEventListener('pointerup',clearMiniGesture);
+  mini.addEventListener('pointercancel',clearMiniGesture);
+  mini.addEventListener('lostpointercapture',clearMiniGesture);
+  let miniTouch=null;
+  mini.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||e.target.closest('button,input,a,select,textarea')){miniTouch=null;return;}
+    const t=e.touches[0];miniTouch={id:t.identifier,x:t.clientX,y:t.clientY};
+  },{passive:true});
+  mini.addEventListener('touchmove',e=>{
+    if(!miniTouch)return;
+    const t=Array.from(e.changedTouches).find(x=>x.identifier===miniTouch.id);
+    if(!t)return;
+    const dx=t.clientX-miniTouch.x,dy=t.clientY-miniTouch.y;
+    if(dy < -24&&Math.abs(dy)>Math.abs(dx)*0.8){
+      e.preventDefault();miniTouch=null;setExpanded(true);
+    }
+  },{passive:false});
+  const clearMiniTouch=()=>{miniTouch=null;};
+  mini.addEventListener('touchend',clearMiniTouch,{passive:true});
+  mini.addEventListener('touchcancel',clearMiniTouch,{passive:true});
   mini.addEventListener('click',e=>{if(!e.target.closest('button,input,label'))setExpanded(true);});
-  const expanded=$('expanded-player');let expandedStart=null;
-  expanded.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,a,[role="button"],select,textarea')){expandedStart=null;return;}expandedStart={y:e.clientY,id:e.pointerId};if(expanded.setPointerCapture)expanded.setPointerCapture(e.pointerId);});
-  expanded.addEventListener('pointerup',e=>{if(expandedStart&&e.clientY-expandedStart.y>35){e.preventDefault();setExpanded(false);}expandedStart=null;});
-  expanded.addEventListener('pointercancel',()=>{expandedStart=null;});
+
+  const expanded=$('expanded-player');
+  let expandedGesture=null;
+  expanded.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='touch'||!e.isPrimary||e.button!==0||e.target.closest('button,input,a,select,textarea'))return;
+    expandedGesture={id:e.pointerId,x:e.clientX,y:e.clientY};
+  });
+  expanded.addEventListener('pointermove',e=>{
+    if(e.pointerType==='touch'||!expandedGesture||expandedGesture.id!==e.pointerId)return;
+    const dx=e.clientX-expandedGesture.x,dy=e.clientY-expandedGesture.y;
+    if(dy>28&&Math.abs(dy)>Math.abs(dx)*0.8){expandedGesture=null;setExpanded(false);}
+  });
+  const clearExpandedGesture=()=>{expandedGesture=null;};
+  expanded.addEventListener('pointerup',clearExpandedGesture);
+  expanded.addEventListener('pointercancel',clearExpandedGesture);
+  expanded.addEventListener('lostpointercapture',clearExpandedGesture);
+  let expandedTouch=null;
+  expanded.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||e.target.closest('button,input,a,select,textarea')){expandedTouch=null;return;}
+    const t=e.touches[0];expandedTouch={id:t.identifier,x:t.clientX,y:t.clientY};
+  },{passive:true});
+  expanded.addEventListener('touchmove',e=>{
+    if(!expandedTouch)return;
+    const t=Array.from(e.changedTouches).find(x=>x.identifier===expandedTouch.id);
+    if(!t)return;
+    const dx=t.clientX-expandedTouch.x,dy=t.clientY-expandedTouch.y;
+    if(dy>28&&Math.abs(dy)>Math.abs(dx)*0.8){
+      e.preventDefault();expandedTouch=null;setExpanded(false);
+    }
+  },{passive:false});
+  const clearExpandedTouch=()=>{expandedTouch=null;};
+  expanded.addEventListener('touchend',clearExpandedTouch,{passive:true});
+  expanded.addEventListener('touchcancel',clearExpandedTouch,{passive:true});
   const saved=localStorage.getItem('rivune-theme');if(saved==='light')document.documentElement.dataset.theme='light';
   const themeButton=$('theme');
   function syncThemeIcon(){const light=document.documentElement.dataset.theme==='light';themeButton.replaceChildren(icon(light?'sun':'moon',19));themeButton.setAttribute('aria-label',light?'Switch to dark theme':'Switch to light theme');}

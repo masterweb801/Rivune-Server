@@ -29,20 +29,11 @@ jobs:
           protocol: ftp
           port: 21
           local-dir: ./
-          # InfinityFree's document root for https://rivune.page.gd/
-          server-dir: /rivune.page.gd/htdocs/
+          server-dir: /rivune.rf.gd/htdocs/
           dangerous-clean-slate: false
           exclude: |
-            .git
-            .git/**
-            .git*/**
-            **/.git
-            **/.git/**
-            **/.git*/**
-            .github
-            .github/**
+            **/.git*
             **/.github/**
-            README.md
             **/README.md
             api/**
             **/api/**
