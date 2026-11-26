@@ -1,10 +1,11 @@
 name: Deploy RIVUNE to InfinityFree
 
 on:
-  push:
+  pull_request:
+    types:
+      - closed
     branches:
       - main
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +16,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     name: FTP deployment
     runs-on: ubuntu-latest
     steps:
