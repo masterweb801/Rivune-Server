@@ -32,8 +32,12 @@
     publicSearch.hidden=!open;
     searchToggle.setAttribute('aria-expanded',open?'true':'false');
     searchToggle.setAttribute('aria-label',open?'Close search':'Open search');
-    if(open){document.body.classList.remove('nav-hidden');}
-    else{search.blur();}
+    if(open){
+      document.body.classList.remove('nav-hidden');
+      // Explicitly focus after the overlay is visible so Android WebView opens
+      // the keyboard and accepts text on the first tap.
+      requestAnimationFrame(()=>{if(headerOverlay.classList.contains('search-open'))search.focus({preventScroll:true});});
+    }else{search.blur();}
   }
   searchToggle.addEventListener('click',()=>setSearchOpen(!headerOverlay.classList.contains('search-open')));
   searchClose.addEventListener('click',()=>setSearchOpen(false));
