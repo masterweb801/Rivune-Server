@@ -259,7 +259,7 @@
       let data=cachedData;
       if(!data){
         const params=new URLSearchParams({page:String(page),limit:'50',q:requestedQuery,sort:sortMode});
-        const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal});
+        const response=await fetch('api.php?'+params.toString(),{headers:{Accept:'application/json'},signal:controller.signal,cache:'no-store',credentials:'same-origin'});
         if(!response.ok)throw new Error('Library request failed (HTTP '+response.status+')');
         data=await response.json();
         if(requestedQuery&&!nativeMode)writeSearchCache(requestedQuery,sortMode,page,data);
@@ -581,7 +581,22 @@
     onNativeStateChanged,
     onNativeError
   };
-  search.addEventListener('input',()=>{searchDirty=true;searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),350);});
+  function handleSearchInput(){
+    searchDirty=true;
+    searchQuery=search.value.trim();
+    clearTimeout(searchTimer);
+    searchTimer=setTimeout(()=>fetchPage({reset:true}),300);
+  }
+  // Android WebView keyboards can report committed text through different
+  // event sequences (especially IME composition and the search action).
+  // A shared debounced handler keeps these events from issuing duplicate calls.
+  search.addEventListener('input',handleSearchInput);
+  search.addEventListener('search',handleSearchInput);
+  search.addEventListener('change',handleSearchInput);
+  search.addEventListener('compositionend',handleSearchInput);
+  search.addEventListener('keyup',event=>{
+    if(event.key==='Enter')handleSearchInput();
+  });
   $('library-sort').addEventListener('change',event=>{sortMode=['alphabetical','newest'].includes(event.target.value)?event.target.value:'popular';fetchPage({reset:true});});
   $('load-more').addEventListener('click',()=>fetchPage());
   const sentinel=$('load-more-sentinel');
@@ -624,23 +639,6 @@
   mini.addEventListener('pointerup',clearMiniGesture);
   mini.addEventListener('pointercancel',clearMiniGesture);
   mini.addEventListener('lostpointercapture',clearMiniGesture);
-  let miniTouch=null;
-  mini.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1||e.target.closest('button,input,a,select,textarea')){miniTouch=null;return;}
-    const t=e.touches[0];miniTouch={id:t.identifier,x:t.clientX,y:t.clientY};
-  },{passive:true});
-  mini.addEventListener('touchmove',e=>{
-    if(!miniTouch)return;
-    const t=Array.from(e.changedTouches).find(x=>x.identifier===miniTouch.id);
-    if(!t)return;
-    const dx=t.clientX-miniTouch.x,dy=t.clientY-miniTouch.y;
-    if(dy < -24&&Math.abs(dy)>Math.abs(dx)*0.8){
-      e.preventDefault();miniTouch=null;setExpanded(true);
-    }
-  },{passive:false});
-  const clearMiniTouch=()=>{miniTouch=null;};
-  mini.addEventListener('touchend',clearMiniTouch,{passive:true});
-  mini.addEventListener('touchcancel',clearMiniTouch,{passive:true});
   mini.addEventListener('click',e=>{if(!e.target.closest('button,input,label'))setExpanded(true);});
 
   const expanded=$('expanded-player');
@@ -658,23 +656,38 @@
   expanded.addEventListener('pointerup',clearExpandedGesture);
   expanded.addEventListener('pointercancel',clearExpandedGesture);
   expanded.addEventListener('lostpointercapture',clearExpandedGesture);
-  let expandedTouch=null;
-  expanded.addEventListener('touchstart',e=>{
-    if(e.touches.length!==1||e.target.closest('button,input,a,select,textarea')){expandedTouch=null;return;}
-    const t=e.touches[0];expandedTouch={id:t.identifier,x:t.clientX,y:t.clientY};
-  },{passive:true});
-  expanded.addEventListener('touchmove',e=>{
-    if(!expandedTouch)return;
-    const t=Array.from(e.changedTouches).find(x=>x.identifier===expandedTouch.id);
-    if(!t)return;
-    const dx=t.clientX-expandedTouch.x,dy=t.clientY-expandedTouch.y;
-    if(dy>28&&Math.abs(dy)>Math.abs(dx)*0.8){
-      e.preventDefault();expandedTouch=null;setExpanded(false);
+  // Centralized touch gesture tracking. Capture at document level so the
+  // gesture survives nested artwork/text elements and WebView event retargeting.
+  let activePlayerTouch=null;
+  document.addEventListener('touchstart',event=>{
+    if(event.touches.length!==1){activePlayerTouch=null;return;}
+    const target=event.target;
+    if(target.closest('button,input,a,select,textarea,label')){activePlayerTouch=null;return;}
+    const miniTarget=target.closest('#mini-player');
+    const expandedTarget=target.closest('#expanded-player');
+    if(!miniTarget&&!expandedTarget){activePlayerTouch=null;return;}
+    if(expandedTarget&&!expandedTarget.classList.contains('open')){activePlayerTouch=null;return;}
+    const touch=event.touches[0];
+    activePlayerTouch={surface:miniTarget?'mini':'expanded',id:touch.identifier,x:touch.clientX,y:touch.clientY,triggered:false};
+  },{capture:true,passive:true});
+  document.addEventListener('touchmove',event=>{
+    const gesture=activePlayerTouch;
+    if(!gesture||gesture.triggered)return;
+    const touch=Array.from(event.changedTouches).find(item=>item.identifier===gesture.id);
+    if(!touch)return;
+    const dx=touch.clientX-gesture.x,dy=touch.clientY-gesture.y;
+    const vertical=Math.abs(dy)>Math.abs(dx)*0.8;
+    const threshold=gesture.surface==='mini'?-24:28;
+    const crossed=gesture.surface==='mini'?dy<threshold:dy>threshold;
+    if(crossed&&vertical){
+      event.preventDefault();
+      gesture.triggered=true;
+      setExpanded(gesture.surface==='mini');
     }
-  },{passive:false});
-  const clearExpandedTouch=()=>{expandedTouch=null;};
-  expanded.addEventListener('touchend',clearExpandedTouch,{passive:true});
-  expanded.addEventListener('touchcancel',clearExpandedTouch,{passive:true});
+  },{capture:true,passive:false});
+  const clearPlayerTouch=()=>{activePlayerTouch=null;};
+  document.addEventListener('touchend',clearPlayerTouch,{capture:true,passive:true});
+  document.addEventListener('touchcancel',clearPlayerTouch,{capture:true,passive:true});
   const saved=localStorage.getItem('rivune-theme');if(saved==='light')document.documentElement.dataset.theme='light';
   const themeButton=$('theme');
   function syncThemeIcon(){const light=document.documentElement.dataset.theme==='light';themeButton.replaceChildren(icon(light?'sun':'moon',19));themeButton.setAttribute('aria-label',light?'Switch to dark theme':'Switch to light theme');}
