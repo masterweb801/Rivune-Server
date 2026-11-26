@@ -348,46 +348,46 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
 }
 
 
-/* Wide screens: keep the complete search field inline with the navbar. */
-@media(min-width:900px){
-  .scroll-header.search-inline{
-    height:76px;
-    min-height:76px;
-    flex-direction:row;
-    align-items:center;
-    gap:0;
-    padding:0 max(22px,calc((100% - 1080px)/2));
-  }
-  .scroll-header.search-inline .top{
-    flex:0 0 auto;
-    width:auto;
-    max-width:none;
-    height:76px;
-    margin:0;
-    padding:0;
-  }
-  .scroll-header.search-inline .search,
-  .scroll-header.search-inline .search[hidden]{
-    display:flex!important;
-    position:relative!important;
-    inset:auto!important;
-    flex:1 1 360px;
-    width:auto!important;
-    max-width:420px;
-    min-width:220px;
-    height:44px!important;
-    min-height:44px!important;
-    margin:0 0 0 auto!important;
-    padding:0 12px!important;
-    border:1px solid var(--line)!important;
-    border-radius:var(--radius-md)!important;
-    background:var(--surface)!important;
-    visibility:visible!important;
-    pointer-events:auto!important;
-  }
-  .scroll-header.search-inline .search-close{display:none;}
-  .scroll-header.search-inline .top-actions{flex:0 0 auto;}
+/* Inline navbar search is enabled by JS only when the actual contents fit. */
+.scroll-header.search-inline{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:center;
+  gap:0;
+  height:76px;
+  min-height:76px;
+  padding:0 max(32px,calc((100% - 1320px)/2));
 }
+.scroll-header.search-inline .top{
+  flex:1 1 auto;
+  min-width:0;
+  width:auto!important;
+  max-width:none!important;
+  height:76px;
+  margin:0;
+  padding:0;
+}
+.scroll-header.search-inline .search,
+.scroll-header.search-inline .search[hidden]{
+  display:flex!important;
+  position:relative!important;
+  inset:auto!important;
+  flex:0 1 440px;
+  width:auto!important;
+  max-width:440px;
+  min-width:260px;
+  height:44px!important;
+  min-height:44px!important;
+  margin:0 0 0 clamp(22px,3vw,48px)!important;
+  padding:0 12px!important;
+  border:1px solid var(--line)!important;
+  border-radius:var(--radius-md)!important;
+  background:var(--surface)!important;
+  visibility:visible!important;
+  pointer-events:auto!important;
+}
+.scroll-header.search-inline .search-close{display:none;}
+.scroll-header.search-inline .top-actions{flex:0 0 auto;}
 
 
 /* Large-screen public listening layout: use the available width deliberately. */
@@ -448,27 +448,7 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
   }
   footer{padding-top:24px;}
 }
-@media(min-width:900px){
-  .scroll-header.search-inline{
-    display:flex!important;
-    flex-direction:row!important;
-    align-items:center!important;
-    padding-inline:max(32px,calc((100% - 1320px)/2));
-  }
-  .scroll-header.search-inline .top{
-    width:auto!important;
-    max-width:none!important;
-    flex:1 1 auto;
-    min-width:0;
-  }
-  .scroll-header.search-inline .search,
-  .scroll-header.search-inline .search[hidden]{
-    flex:0 1 440px;
-    max-width:440px;
-    min-width:260px;
-    margin-left:clamp(22px,3vw,48px)!important;
-  }
-}
+
 @media(min-width:1500px){
   .wrap,footer{width:min(1440px,calc(100% - 96px));}
   .tracks,.library-skeleton{grid-template-columns:repeat(3,minmax(0,1fr));}
