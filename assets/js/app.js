@@ -39,6 +39,28 @@
   searchClose.addEventListener('click',()=>setSearchOpen(false));
   search.addEventListener('keydown',event=>{if(event.key==='Escape')setSearchOpen(false);});
 
+  // Keep search permanently visible in the navbar when the viewport can fit it.
+  const inlineSearchMedia=window.matchMedia('(min-width: 900px)');
+  function syncSearchLayout(){
+    const inline=inlineSearchMedia.matches;
+    headerOverlay.classList.toggle('search-inline',inline);
+    if(inline){
+      publicSearch.hidden=false;
+      headerOverlay.classList.remove('search-open');
+      searchToggle.hidden=true;
+      searchToggle.setAttribute('aria-expanded','false');
+      searchToggle.setAttribute('aria-label','Search');
+    }else{
+      searchToggle.hidden=false;
+      publicSearch.hidden=!headerOverlay.classList.contains('search-open');
+      searchToggle.setAttribute('aria-expanded',headerOverlay.classList.contains('search-open')?'true':'false');
+      searchToggle.setAttribute('aria-label',headerOverlay.classList.contains('search-open')?'Close search':'Open search');
+    }
+  }
+  if(typeof inlineSearchMedia.addEventListener==='function')inlineSearchMedia.addEventListener('change',syncSearchLayout);
+  else inlineSearchMedia.addListener(syncSearchLayout);
+  syncSearchLayout();
+
   let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
   let directionTravel=0;
   const directionThreshold=6;
