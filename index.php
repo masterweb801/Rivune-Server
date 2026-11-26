@@ -37,24 +37,34 @@ rivune_maintenance_enforce($pdo, 'html');
       <div id="cover" class="cover"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
       <div class="now-copy"><strong id="now-title">Nothing playing</strong><span id="now-artist">Choose a track</span></div>
     </div>
-    <div class="mini-controls">
-      <button id="prev" class="control" aria-label="Previous"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14"/><path d="m19 5-10 7 10 7z"/></svg></button>
-      <button id="toggle" class="play" aria-label="Play"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/></svg></button>
-      <button id="next" class="control" aria-label="Next"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14"/><path d="m5 5 10 7-10 7z"/></svg></button>
+    <div class="mini-controls" aria-label="Playback controls">
+      <button id="prev" class="control" type="button" aria-label="Previous"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14"/><path d="m19 5-10 7 10 7z"/></svg></button>
+      <button id="toggle" class="play" type="button" aria-label="Play"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/></svg></button>
+      <button id="next" class="control" type="button" aria-label="Next"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14"/><path d="m5 5 10 7-10 7z"/></svg></button>
     </div>
     <div class="mini-progress"><span id="mini-progress"></span></div>
   </div>
-
 </aside>
-  <section class="expanded-player" id="expanded-player" aria-hidden="true" aria-label="Full screen player">
-    <div class="expanded-top"><button id="collapse-player" class="collapse-player" aria-label="Collapse player"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button><span>NOW PLAYING</span><button id="expanded-shuffle" class="control" aria-label="Loop all" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg></button></div>
-    <div class="expanded-content">
-      <div class="expanded-art" id="expanded-art"><svg class="ui-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+<section class="expanded-player" id="expanded-player" aria-hidden="true" aria-label="Full screen player">
+  <div class="expanded-top">
+    <button id="collapse-player" class="collapse-player" type="button" aria-label="Collapse player"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <span>NOW PLAYING</span>
+    <span class="expanded-top-mark" aria-hidden="true">RIVUNE</span>
+  </div>
+  <div class="expanded-content">
+    <div class="expanded-art" id="expanded-art"><svg class="ui-icon" viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+    <div class="expanded-details">
       <div class="expanded-track"><strong id="expanded-title">Nothing playing</strong><span id="expanded-artist">Choose a track</span></div>
       <div class="expanded-timeline"><time id="expanded-elapsed">0:00</time><input id="expanded-seek" type="range" min="0" max="1000" value="0"><time id="expanded-duration">0:00</time></div>
-      <div class="expanded-controls"><button id="expanded-prev" class="control" aria-label="Previous"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14"/><path d="m19 5-10 7 10 7z"/></svg></button><button id="expanded-toggle" class="play" aria-label="Play"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/></svg></button><button id="expanded-next" class="control" aria-label="Next"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14"/><path d="m5 5 10 7-10 7z"/></svg></button></div>
+      <div class="expanded-controls">
+        <button id="expanded-shuffle" class="control expanded-mode" type="button" aria-label="Loop all" aria-pressed="false"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></svg></button>
+        <button id="expanded-prev" class="control" type="button" aria-label="Previous"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 5v14"/><path d="m19 5-10 7 10 7z"/></svg></button>
+        <button id="expanded-toggle" class="play" type="button" aria-label="Play"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 5 11 7-11 7z" fill="currentColor" stroke="none"/></svg></button>
+        <button id="expanded-next" class="control" type="button" aria-label="Next"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 5v14"/><path d="m5 5 10 7-10 7z"/></svg></button>
+      </div>
+      <p class="expanded-hint">Swipe down or tap the arrow to close</p>
     </div>
-    <p class="expanded-hint">Swipe down or tap the arrow to close</p>
-  </section>
+  </div>
+</section>
 <audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=adaptive-navbar-search-1" defer></script>
 </body></html>
