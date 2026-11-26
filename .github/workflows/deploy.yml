@@ -1,0 +1,39 @@
+name: Deploy RIVUNE to InfinityFree
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rivune-infinityfree-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: FTP deployment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+
+      - name: Deploy application files
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.INFINITYFREE_FTP_SERVER }}
+          username: ${{ secrets.INFINITYFREE_FTP_USERNAME }}
+          password: ${{ secrets.INFINITYFREE_FTP_PASSWORD }}
+          protocol: ftp
+          port: 21
+          local-dir: ./
+          server-dir: /htdocs/
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/storage/**
+            **/README.md
