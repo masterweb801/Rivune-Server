@@ -17,7 +17,7 @@ rivune_maintenance_enforce($pdo, 'html');
 <link rel="icon" type="image/png" href="/public/assets/rivune-logo.png">
 <link rel="apple-touch-icon" href="/public/assets/rivune-logo.png">
 <link rel="stylesheet" href="assets/css/tokens.css?v=signature-nav-1">
-<link rel="stylesheet" href="assets/css/app.css?v=large-screen-layout-1">
+<link rel="stylesheet" href="assets/css/app.css?v=adaptive-navbar-search-1">
 <link rel="stylesheet" href="assets/css/controls.css?v=svg-icons-1">
 <link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
 <link rel="stylesheet" href="assets/css/library.css?v=library-1">
@@ -56,5 +56,5 @@ rivune_maintenance_enforce($pdo, 'html');
     </div>
     <p class="expanded-hint">Swipe down or tap the arrow to close</p>
   </section>
-<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=navbar-inline-search-2" defer></script>
+<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=adaptive-navbar-search-1" defer></script>
 </body></html>
