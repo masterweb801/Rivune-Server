@@ -603,49 +603,72 @@
   $('mini-now').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpanded(true);}});
   const mini=$('mini-player');
   let miniGesture=null;
+  // Pointer events cover mouse/pen. Touch Events are used separately because
+  // iOS Safari and embedded WebViews can cancel pointer streams inconsistently.
   mini.addEventListener('pointerdown',e=>{
-    if(!e.isPrimary||e.button!==0||e.target.closest('button,input,a,select,textarea'))return;
-    miniGesture={id:e.pointerId,x:e.clientX,y:e.clientY,expanded:false};
-    try{mini.setPointerCapture(e.pointerId);}catch(_){}
+    if(e.pointerType==='touch'||!e.isPrimary||e.button!==0||e.target.closest('button,input,a,select,textarea'))return;
+    miniGesture={id:e.pointerId,x:e.clientX,y:e.clientY};
   });
   mini.addEventListener('pointermove',e=>{
-    if(!miniGesture||miniGesture.id!==e.pointerId||miniGesture.expanded)return;
-    const dx=e.clientX-miniGesture.x;
-    const dy=e.clientY-miniGesture.y;
-    // Expand as soon as a deliberate upward drag is established. Do not
-    // depend on pointerup, which mobile browsers can cancel during gestures.
-    if(dy < -24&&Math.abs(dy)>Math.abs(dx)*0.8){
-      miniGesture.expanded=true;
-      miniGesture=null;
-      setExpanded(true);
-    }
+    if(e.pointerType==='touch'||!miniGesture||miniGesture.id!==e.pointerId)return;
+    const dx=e.clientX-miniGesture.x,dy=e.clientY-miniGesture.y;
+    if(dy < -24&&Math.abs(dy)>Math.abs(dx)*0.8){miniGesture=null;setExpanded(true);}
   });
   const clearMiniGesture=()=>{miniGesture=null;};
   mini.addEventListener('pointerup',clearMiniGesture);
   mini.addEventListener('pointercancel',clearMiniGesture);
   mini.addEventListener('lostpointercapture',clearMiniGesture);
+  let miniTouch=null;
+  mini.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||e.target.closest('button,input,a,select,textarea')){miniTouch=null;return;}
+    const t=e.touches[0];miniTouch={id:t.identifier,x:t.clientX,y:t.clientY};
+  },{passive:true});
+  mini.addEventListener('touchmove',e=>{
+    if(!miniTouch)return;
+    const t=Array.from(e.changedTouches).find(x=>x.identifier===miniTouch.id);
+    if(!t)return;
+    const dx=t.clientX-miniTouch.x,dy=t.clientY-miniTouch.y;
+    if(dy < -24&&Math.abs(dy)>Math.abs(dx)*0.8){
+      e.preventDefault();miniTouch=null;setExpanded(true);
+    }
+  },{passive:false});
+  const clearMiniTouch=()=>{miniTouch=null;};
+  mini.addEventListener('touchend',clearMiniTouch,{passive:true});
+  mini.addEventListener('touchcancel',clearMiniTouch,{passive:true});
   mini.addEventListener('click',e=>{if(!e.target.closest('button,input,label'))setExpanded(true);});
 
   const expanded=$('expanded-player');
   let expandedGesture=null;
   expanded.addEventListener('pointerdown',e=>{
-    if(!e.isPrimary||e.button!==0||e.target.closest('button,input,a,select,textarea'))return;
+    if(e.pointerType==='touch'||!e.isPrimary||e.button!==0||e.target.closest('button,input,a,select,textarea'))return;
     expandedGesture={id:e.pointerId,x:e.clientX,y:e.clientY};
-    try{expanded.setPointerCapture(e.pointerId);}catch(_){}
   });
   expanded.addEventListener('pointermove',e=>{
-    if(!expandedGesture||expandedGesture.id!==e.pointerId)return;
-    const dx=e.clientX-expandedGesture.x;
-    const dy=e.clientY-expandedGesture.y;
-    if(dy>28&&Math.abs(dy)>Math.abs(dx)*0.8){
-      expandedGesture=null;
-      setExpanded(false);
-    }
+    if(e.pointerType==='touch'||!expandedGesture||expandedGesture.id!==e.pointerId)return;
+    const dx=e.clientX-expandedGesture.x,dy=e.clientY-expandedGesture.y;
+    if(dy>28&&Math.abs(dy)>Math.abs(dx)*0.8){expandedGesture=null;setExpanded(false);}
   });
   const clearExpandedGesture=()=>{expandedGesture=null;};
   expanded.addEventListener('pointerup',clearExpandedGesture);
   expanded.addEventListener('pointercancel',clearExpandedGesture);
   expanded.addEventListener('lostpointercapture',clearExpandedGesture);
+  let expandedTouch=null;
+  expanded.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1||e.target.closest('button,input,a,select,textarea')){expandedTouch=null;return;}
+    const t=e.touches[0];expandedTouch={id:t.identifier,x:t.clientX,y:t.clientY};
+  },{passive:true});
+  expanded.addEventListener('touchmove',e=>{
+    if(!expandedTouch)return;
+    const t=Array.from(e.changedTouches).find(x=>x.identifier===expandedTouch.id);
+    if(!t)return;
+    const dx=t.clientX-expandedTouch.x,dy=t.clientY-expandedTouch.y;
+    if(dy>28&&Math.abs(dy)>Math.abs(dx)*0.8){
+      e.preventDefault();expandedTouch=null;setExpanded(false);
+    }
+  },{passive:false});
+  const clearExpandedTouch=()=>{expandedTouch=null;};
+  expanded.addEventListener('touchend',clearExpandedTouch,{passive:true});
+  expanded.addEventListener('touchcancel',clearExpandedTouch,{passive:true});
   const saved=localStorage.getItem('rivune-theme');if(saved==='light')document.documentElement.dataset.theme='light';
   const themeButton=$('theme');
   function syncThemeIcon(){const light=document.documentElement.dataset.theme==='light';themeButton.replaceChildren(icon(light?'sun':'moon',19));themeButton.setAttribute('aria-label',light?'Switch to dark theme':'Switch to light theme');}
