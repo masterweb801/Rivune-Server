@@ -450,6 +450,9 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
 }
 @media(min-width:900px){
   .scroll-header.search-inline{
+    display:flex!important;
+    flex-direction:row!important;
+    align-items:center!important;
     padding-inline:max(32px,calc((100% - 1320px)/2));
   }
   .scroll-header.search-inline .top{
