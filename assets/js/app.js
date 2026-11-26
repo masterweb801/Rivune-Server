@@ -267,7 +267,9 @@
       if(requestId!==requestSequence)return;
       lastFetchedQuery=requestedQuery;
       if(requestedQuery==='')hasFetchedDefaultPage=true;
-      if(nativeMode){await ensureFullLibrary();return;}
+      // Native Android playback must not bypass the visible API result.
+      // Search and reset requests still need to render the matching page in
+      // the WebView; the native playback catalogue is managed separately.
       const incoming=Array.isArray(data.tracks)?data.tracks:[];
       if(reset)displayTracks=incoming;else{const knownDisplay=new Set(displayTracks.map(t=>String(t.id)));displayTracks.push(...incoming.filter(t=>!knownDisplay.has(String(t.id))));}
       if(!searchQuery){
