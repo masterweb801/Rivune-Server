@@ -39,26 +39,48 @@
   searchClose.addEventListener('click',()=>setSearchOpen(false));
   search.addEventListener('keydown',event=>{if(event.key==='Escape')setSearchOpen(false);});
 
-  // Keep search permanently visible in the navbar when the viewport can fit it.
-  const inlineSearchMedia=window.matchMedia('(min-width: 900px)');
+  // Keep search inline only when the navbar has enough real space for it.
+  // This is content-based rather than a fixed viewport breakpoint, like YouTube's navbar.
+  let inlineSearchFrame=0;
   function syncSearchLayout(){
-    const inline=inlineSearchMedia.matches;
-    headerOverlay.classList.toggle('search-inline',inline);
-    if(inline){
-      publicSearch.hidden=false;
-      headerOverlay.classList.remove('search-open');
-      searchToggle.hidden=true;
-      searchToggle.setAttribute('aria-expanded','false');
-      searchToggle.setAttribute('aria-label','Search');
-    }else{
-      searchToggle.hidden=false;
-      publicSearch.hidden=!headerOverlay.classList.contains('search-open');
-      searchToggle.setAttribute('aria-expanded',headerOverlay.classList.contains('search-open')?'true':'false');
-      searchToggle.setAttribute('aria-label',headerOverlay.classList.contains('search-open')?'Close search':'Open search');
-    }
+    if(inlineSearchFrame)cancelAnimationFrame(inlineSearchFrame);
+    inlineSearchFrame=requestAnimationFrame(()=>{
+      inlineSearchFrame=0;
+      const headerStyle=getComputedStyle(headerOverlay);
+      const horizontalPadding=parseFloat(headerStyle.paddingLeft||0)+parseFloat(headerStyle.paddingRight||0);
+      const availableWidth=headerOverlay.clientWidth-horizontalPadding;
+      const brandWidth=publicTop.querySelector('.brand')?.getBoundingClientRect().width||0;
+      const actionsWidth=publicTop.querySelector('.top-actions')?.getBoundingClientRect().width||0;
+      const searchMinimum=260;
+      const breathingRoom=48;
+      const searchGap=24;
+      const inline=availableWidth >= brandWidth+actionsWidth+searchMinimum+breathingRoom+searchGap;
+      headerOverlay.classList.toggle('search-inline',inline);
+      if(inline){
+        publicSearch.hidden=false;
+        headerOverlay.classList.remove('search-open');
+        searchToggle.hidden=true;
+        searchToggle.setAttribute('aria-expanded','false');
+        searchToggle.setAttribute('aria-label','Search');
+      }else{
+        searchToggle.hidden=false;
+        publicSearch.hidden=!headerOverlay.classList.contains('search-open');
+        searchToggle.setAttribute('aria-expanded',headerOverlay.classList.contains('search-open')?'true':'false');
+        searchToggle.setAttribute('aria-label',headerOverlay.classList.contains('search-open')?'Close search':'Open search');
+      }
+    });
   }
-  if(typeof inlineSearchMedia.addEventListener==='function')inlineSearchMedia.addEventListener('change',syncSearchLayout);
-  else inlineSearchMedia.addListener(syncSearchLayout);
+  if('ResizeObserver' in window){
+    const navbarResizeObserver=new ResizeObserver(syncSearchLayout);
+    navbarResizeObserver.observe(headerOverlay);
+    navbarResizeObserver.observe(publicTop);
+    const brandElement=publicTop.querySelector('.brand');
+    const actionsElement=publicTop.querySelector('.top-actions');
+    if(brandElement)navbarResizeObserver.observe(brandElement);
+    if(actionsElement)navbarResizeObserver.observe(actionsElement);
+  }else{
+    window.addEventListener('resize',syncSearchLayout,{passive:true});
+  }
   syncSearchLayout();
 
   let previousPageY=window.pageYOffset||document.documentElement.scrollTop||0;
