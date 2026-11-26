@@ -346,3 +346,45 @@ body.nav-hidden .scroll-header{transform:translate3d(0,-110%,0);pointer-events:n
     background:var(--surface)!important;
   }
 }
+
+
+/* Wide screens: keep the complete search field inline with the navbar. */
+@media(min-width:900px){
+  .scroll-header.search-inline{
+    height:76px;
+    min-height:76px;
+    flex-direction:row;
+    align-items:center;
+    gap:0;
+    padding:0 max(22px,calc((100% - 1080px)/2));
+  }
+  .scroll-header.search-inline .top{
+    flex:0 0 auto;
+    width:auto;
+    max-width:none;
+    height:76px;
+    margin:0;
+    padding:0;
+  }
+  .scroll-header.search-inline .search,
+  .scroll-header.search-inline .search[hidden]{
+    display:flex!important;
+    position:relative!important;
+    inset:auto!important;
+    flex:1 1 360px;
+    width:auto!important;
+    max-width:420px;
+    min-width:220px;
+    height:44px!important;
+    min-height:44px!important;
+    margin:0 0 0 auto!important;
+    padding:0 12px!important;
+    border:1px solid var(--line)!important;
+    border-radius:var(--radius-md)!important;
+    background:var(--surface)!important;
+    visibility:visible!important;
+    pointer-events:auto!important;
+  }
+  .scroll-header.search-inline .search-close{display:none;}
+  .scroll-header.search-inline .top-actions{flex:0 0 auto;}
+}
