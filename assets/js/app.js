@@ -46,11 +46,15 @@
     if(inlineSearchFrame)cancelAnimationFrame(inlineSearchFrame);
     inlineSearchFrame=requestAnimationFrame(()=>{
       inlineSearchFrame=0;
-      const headerStyle=getComputedStyle(headerOverlay);
-      const horizontalPadding=parseFloat(headerStyle.paddingLeft||0)+parseFloat(headerStyle.paddingRight||0);
-      const availableWidth=headerOverlay.clientWidth-horizontalPadding;
+      const headerWidth=headerOverlay.clientWidth;
+      const wideHeader=window.innerWidth>=1500;
+      const horizontalPadding=Math.max(wideHeader?48:32,(headerWidth-(wideHeader?1440:1320))/2);
+      const availableWidth=headerWidth-horizontalPadding*2;
       const brandWidth=publicTop.querySelector('.brand')?.getBoundingClientRect().width||0;
-      const actionsWidth=publicTop.querySelector('.top-actions')?.getBoundingClientRect().width||0;
+      const actions=publicTop.querySelector('.top-actions');
+      const actionItems=actions?[...actions.children].filter(item=>item!==searchToggle&&!item.hidden):[];
+      const actionGap=actions?parseFloat(getComputedStyle(actions).gap)||0:0;
+      const actionsWidth=actionItems.reduce((total,item)=>total+item.getBoundingClientRect().width,0)+Math.max(0,actionItems.length-1)*actionGap;
       const searchMinimum=260;
       const breathingRoom=48;
       const searchGap=24;
