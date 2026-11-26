@@ -21,7 +21,7 @@ jobs:
       - name: Check out main
         uses: actions/checkout@v4
 
-      - name: Deploy application files
+      - name: Deploy RIVUNE application files
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.INFINITYFREE_FTP_SERVER }}
@@ -30,10 +30,13 @@ jobs:
           protocol: ftp
           port: 21
           local-dir: ./
-          server-dir: /htdocs/
+          server-dir: /rivune.rf.gd/htdocs/
           dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.github/**
-            **/storage/**
             **/README.md
+            api/**
+            **/api/**
+            storage/**
+            **/storage/**
