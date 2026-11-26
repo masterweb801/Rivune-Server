@@ -528,7 +528,7 @@
     onNativeError
   };
   search.addEventListener('input',()=>{searchDirty=true;searchQuery=search.value.trim();clearTimeout(searchTimer);searchTimer=setTimeout(()=>fetchPage({reset:true}),350);});
-  $('library-sort').addEventListener('change',event=>{sortMode=event.target.value==='alphabetical'?'alphabetical':'popular';fetchPage({reset:true});});
+  $('library-sort').addEventListener('change',event=>{sortMode=['alphabetical','newest'].includes(event.target.value)?event.target.value:'popular';fetchPage({reset:true});});
   $('load-more').addEventListener('click',()=>fetchPage());
   const sentinel=$('load-more-sentinel');
   if('IntersectionObserver' in window){const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)&&hasMore&&!loadingPage)fetchPage();},{rootMargin:'700px 0px'});observer.observe(sentinel);}
