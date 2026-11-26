@@ -3,6 +3,7 @@ declare(strict_types=1);
 require __DIR__ . '/lib/bootstrap.php';
 require_once __DIR__ . '/lib/maintenance.php';
 rivune_maintenance_enforce($pdo, 'html');
+header('Cache-Control: no-cache, must-revalidate');
 ?><!doctype html>
 <html lang="en" data-theme="dark">
 <head>
@@ -16,12 +17,12 @@ rivune_maintenance_enforce($pdo, 'html');
 <link rel="manifest" href="/site.webmanifest">
 <link rel="icon" type="image/png" href="/public/assets/rivune-logo.png">
 <link rel="apple-touch-icon" href="/public/assets/rivune-logo.png">
-<link rel="stylesheet" href="assets/css/tokens.css?v=signature-nav-1">
-<link rel="stylesheet" href="assets/css/app.css?v=adaptive-navbar-search-1">
-<link rel="stylesheet" href="assets/css/controls.css?v=svg-icons-1">
-<link rel="stylesheet" href="assets/css/forms.css?v=forms-1">
-<link rel="stylesheet" href="assets/css/library.css?v=library-1">
-<link rel="stylesheet" href="assets/css/player.css?v=player-structure-redesign-1">
+<link rel="stylesheet" href="assets/css/tokens.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/tokens.css') ?>">
+<link rel="stylesheet" href="assets/css/app.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/app.css') ?>">
+<link rel="stylesheet" href="assets/css/controls.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/controls.css') ?>">
+<link rel="stylesheet" href="assets/css/forms.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/forms.css') ?>">
+<link rel="stylesheet" href="assets/css/library.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/library.css') ?>">
+<link rel="stylesheet" href="assets/css/player.css?v=<?= (int) @filemtime(__DIR__ . '/assets/css/player.css') ?>">
 </head><body>
 <header class="top"><a class="brand" href="./"><img class="brand-logo" src="public/assets/rivune-logo.png" alt="RIVUNE logo"><span>RIVUNE<small>MUSIC WITHOUT BOUNDARIES</small></span></a><div class="top-actions"><button id="search-toggle" class="icon-btn nav-search-btn" type="button" aria-label="Open search" aria-expanded="false"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></button><button id="random-play" class="random-btn" type="button" aria-label="Play a random song"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 14 4 4-4 4"/><path d="M2 18h2.5a6 6 0 0 0 4.7-2.3l5.6-7.4A6 6 0 0 1 19.5 6H22"/><path d="m18 2 4 4-4 4"/><path d="M2 6h2.5a6 6 0 0 1 3.2.9"/></svg> <span>Random</span></button><button id="theme" class="icon-btn" aria-label="Toggle theme"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg></button></div></header>
 <label class="search"><span class="search-icon"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg></span><input id="search" type="search" inputmode="search" enterkeyhint="search" autocapitalize="off" spellcheck="false" placeholder="Search songs, artists or albums" autocomplete="off"><button id="search-close" class="search-close" type="button" aria-label="Close search"><svg class="ui-icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg></button></label>
@@ -66,5 +67,5 @@ rivune_maintenance_enforce($pdo, 'html');
     </div>
   </div>
 </section>
-<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=adaptive-navbar-search-1" defer></script>
+<audio id="audio" preload="none" playsinline></audio><script src="assets/js/app.js?v=<?= (int) @filemtime(__DIR__ . '/assets/js/app.js') ?>" defer></script>
 </body></html>

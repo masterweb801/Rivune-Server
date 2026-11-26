@@ -32,8 +32,16 @@ jobs:
           server-dir: /rivune.rf.gd/htdocs/
           dangerous-clean-slate: false
           exclude: |
-            **/.git*
+            .git
+            .git/**
+            .git*/**
+            **/.git
+            **/.git/**
+            **/.git*/**
+            .github
+            .github/**
             **/.github/**
+            README.md
             **/README.md
             api/**
             **/api/**
