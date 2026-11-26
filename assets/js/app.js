@@ -602,14 +602,45 @@
   $('mini-now').addEventListener('click',()=>setExpanded(true));
   $('mini-now').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setExpanded(true);}});
   const mini=$('mini-player');
-  mini.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,a,[role="button"],select,textarea')){pointerStart=null;return;}pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId};if(mini.setPointerCapture)mini.setPointerCapture(e.pointerId);});
-  mini.addEventListener('pointerup',e=>{if(!pointerStart)return;const dy=e.clientY-pointerStart.y;pointerStart=null;if(dy < -28){e.preventDefault();setExpanded(true);}});
+  mini.addEventListener('pointerdown',e=>{
+    // The artwork/title area is itself a button for tap-to-open, but must
+    // remain a valid gesture surface for swipe-to-open.
+    if(e.target.closest('button,input,a,select,textarea')){pointerStart=null;return;}
+    pointerStart={x:e.clientX,y:e.clientY,id:e.pointerId};
+    if(mini.setPointerCapture)mini.setPointerCapture(e.pointerId);
+  });
+  mini.addEventListener('pointerup',e=>{
+    if(!pointerStart||pointerStart.id!==e.pointerId)return;
+    const dx=e.clientX-pointerStart.x;
+    const dy=e.clientY-pointerStart.y;
+    pointerStart=null;
+    // Require a clearly vertical, intentional upward movement.
+    if(dy < -36&&Math.abs(dy)>Math.abs(dx)*1.15){
+      e.preventDefault();
+      setExpanded(true);
+    }
+  });
   mini.addEventListener('pointercancel',()=>{pointerStart=null;});
+  mini.addEventListener('lostpointercapture',()=>{pointerStart=null;});
   mini.addEventListener('click',e=>{if(!e.target.closest('button,input,label'))setExpanded(true);});
   const expanded=$('expanded-player');let expandedStart=null;
-  expanded.addEventListener('pointerdown',e=>{if(e.target.closest('button,input,a,[role="button"],select,textarea')){expandedStart=null;return;}expandedStart={y:e.clientY,id:e.pointerId};if(expanded.setPointerCapture)expanded.setPointerCapture(e.pointerId);});
-  expanded.addEventListener('pointerup',e=>{if(expandedStart&&e.clientY-expandedStart.y>35){e.preventDefault();setExpanded(false);}expandedStart=null;});
+  expanded.addEventListener('pointerdown',e=>{
+    if(e.target.closest('button,input,a,select,textarea')){expandedStart=null;return;}
+    expandedStart={x:e.clientX,y:e.clientY,id:e.pointerId};
+    if(expanded.setPointerCapture)expanded.setPointerCapture(e.pointerId);
+  });
+  expanded.addEventListener('pointerup',e=>{
+    if(!expandedStart||expandedStart.id!==e.pointerId)return;
+    const dx=e.clientX-expandedStart.x;
+    const dy=e.clientY-expandedStart.y;
+    expandedStart=null;
+    if(dy>42&&Math.abs(dy)>Math.abs(dx)*1.15){
+      e.preventDefault();
+      setExpanded(false);
+    }
+  });
   expanded.addEventListener('pointercancel',()=>{expandedStart=null;});
+  expanded.addEventListener('lostpointercapture',()=>{expandedStart=null;});
   const saved=localStorage.getItem('rivune-theme');if(saved==='light')document.documentElement.dataset.theme='light';
   const themeButton=$('theme');
   function syncThemeIcon(){const light=document.documentElement.dataset.theme==='light';themeButton.replaceChildren(icon(light?'sun':'moon',19));themeButton.setAttribute('aria-label',light?'Switch to dark theme':'Switch to light theme');}
